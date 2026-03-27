@@ -13,6 +13,7 @@
 - взаимодействие с API ГИС МТ
 
 ---
+<img width="1892" height="1023" alt="Снимок экрана 2026-03-27 134150" src="https://github.com/user-attachments/assets/23a1e512-bdc6-4247-ab2b-068ebb657df3" />
 
 ## 🚀 Возможности
 
@@ -24,6 +25,8 @@
 - 🔗 Работа с ERP / MES / SCADA системами
 
 ---
+<img width="1506" height="919" alt="Снимок экрана 2026-03-27 134204" src="https://github.com/user-attachments/assets/300f3e95-e795-41a5-b058-579f56b2d7df" />
+
 
 ## 💼 Коммерческая версия
 
@@ -75,8 +78,8 @@
 
 По вопросам внедрения и коммерческого использования:
 
-📧 Email: your@email.com  
-📱 Telegram: @your_contact  
+📧 Email: support@suhotskiy.dev  
+📱 Telegram: +7 999 616-33-64  
 
 ---
 
