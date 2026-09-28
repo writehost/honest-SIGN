@@ -6,26 +6,23 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import {
   AlertTriangle,
   Boxes,
-  Camera,
   CheckCircle2,
-  Cloud,
   Factory,
+  FlaskConical,
   Info,
   Layers,
-  Printer,
   ScanLine,
   ScrollText,
   Settings,
-  UserRound,
   X,
   XCircle,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { DM_RE, LINE_LABEL, MesProvider, SSCC_RE, uid, useMes } from "./store"
-import { FinishBatchModal, LaunchBatchModal, PalletScanModal } from "./modals"
-import { StatusPill, TONE } from "./ui"
-import { MesUiContext, type MesUi, type Toast } from "./ui-context"
+import { MesProvider, uid, useMes } from "./store"
+import { FinishBatchModal, LaunchBatchModal, MoreOperationsModal } from "./modals"
+import { Btn, Drawer, Segmented, TONE, ToggleRow, VolumeBadge } from "./ui"
+import { MesUiContext, useMesUi, type MesUi, type ScanHandler, type Toast } from "./ui-context"
 
 const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/mes", label: "Линия", icon: Factory },
@@ -37,7 +34,7 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
 ]
 
 export function MesShell({ children }: { children: ReactNode }) {
-  // Демо-данные генерируются случайно — рендерим только на клиенте, чтобы не было рассинхрона гидрации
+  // Демо-данные генерируются случайно — рендерим только на клиенте
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
   if (!mounted) return <div className="mes-root min-h-dvh bg-mes-bg" />
@@ -49,30 +46,44 @@ export function MesShell({ children }: { children: ReactNode }) {
 }
 
 function ShellInner({ children }: { children: ReactNode }) {
-  const { state, active, scanPallet } = useMes()
+  const { state } = useMes()
   const router = useRouter()
   const pathname = usePathname()
   const [launch, setLaunch] = useState<{ open: boolean; preselect?: string }>({ open: false })
-  const [palletOpen, setPalletOpen] = useState(false)
   const [finishOpen, setFinishOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const [simOpen, setSimOpen] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [pendingScan, setPendingScan] = useState<string | null>(null)
+  const handlers = useRef<ScanHandler[]>([])
 
-  const toast = useCallback(
-    (t: Omit<Toast, "id">) => {
-      const id = uid()
-      setToasts((xs) => [{ ...t, id }, ...xs].slice(0, 4))
-      window.setTimeout(() => setToasts((xs) => xs.filter((x) => x.id !== id)), state.settings.toastSeconds * 1000)
-    },
-    [state.settings.toastSeconds],
-  )
+  const toast = useCallback((t: Omit<Toast, "id">) => {
+    const id = uid()
+    setToasts((xs) => [{ ...t, id }, ...xs].slice(0, 3))
+    window.setTimeout(() => setToasts((xs) => xs.filter((x) => x.id !== id)), 4000)
+  }, [])
+
+  const registerScanHandler = useCallback((h: ScanHandler) => {
+    handlers.current = [...handlers.current, h]
+    return () => {
+      handlers.current = handlers.current.filter((x) => x !== h)
+    }
+  }, [])
+
+  const emitScan = useCallback((raw: string) => {
+    const h = handlers.current[handlers.current.length - 1]
+    if (h) h(raw)
+  }, [])
 
   const ui = useMemo<MesUi>(
     () => ({
       openLaunch: (preselect) => setLaunch({ open: true, preselect }),
-      openPalletScan: () => setPalletOpen(true),
       openFinish: () => setFinishOpen(true),
+      openMore: () => setMoreOpen(true),
+      openSim: () => setSimOpen(true),
       toast,
+      registerScanHandler,
+      emitScan,
       pendingScan,
       consumePendingScan: () => setPendingScan(null),
       inspectCode: (code) => {
@@ -80,217 +91,115 @@ function ShellInner({ children }: { children: ReactNode }) {
         router.push("/mes/codes")
       },
     }),
-    [toast, pendingScan, router],
+    [toast, registerScanHandler, emitScan, pendingScan, router],
   )
 
-  // Палета собрана → окно скана открывается само (настраивается)
-  const palletState = state.pallet.state
-  useEffect(() => {
-    if (palletState === "awaiting_code" && state.settings.autoOpenPalletScan) setPalletOpen(true)
-  }, [palletState, state.settings.autoOpenPalletScan])
-
-  // Глобальный перехват ручного сканера (HID-клавиатура): быстрый ввод + Enter вне полей ввода
+  // USB-сканер в режиме HID Keyboard: быстрый поток символов + Enter.
+  // Если фокус в поле ввода — поле обрабатывает Enter само. Иначе собираем скан здесь.
   const buf = useRef({ s: "", t: 0 })
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const el = document.activeElement
-      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return
+      const el = document.activeElement as HTMLElement | null
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return
       const now = performance.now()
-      if (now - buf.current.t > 80) buf.current.s = ""
+      if (now - buf.current.t > 100) buf.current.s = ""
       buf.current.t = now
       if (e.key === "Enter") {
         const code = buf.current.s
         buf.current.s = ""
-        if (code.length < 12) return
-        if (SSCC_RE.test(code) && active) {
-          scanPallet(code)
-          setPalletOpen(true)
-        } else if (DM_RE.test(code)) {
-          setPendingScan(code)
-          if (pathname !== "/mes/codes") router.push("/mes/codes")
-        }
+        if (code.length >= 6) emitScan(code)
       } else if (e.key.length === 1) {
         buf.current.s += e.key
       }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [active, pathname, router, scanPallet])
-
-  const closeLaunch = useCallback(() => setLaunch({ open: false }), [])
-  const closePallet = useCallback(() => setPalletOpen(false), [])
-  const closeFinish = useCallback(() => setFinishOpen(false), [])
+  }, [emitScan])
 
   return (
     <MesUiContext.Provider value={ui}>
       <div className={cn("mes-root flex h-dvh flex-col bg-mes-bg text-mes-ink", state.settings.largeText && "mes-large")}>
-        <Header />
-        <AlarmBar onScan={() => setPalletOpen(true)} />
+        <TopBar onSim={() => setSimOpen(true)} />
         <div className="flex min-h-0 flex-1">
           <Sidebar pathname={pathname} />
-          <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-28 sm:p-6 sm:pb-28 xl:pb-6">{children}</main>
+          <main className="min-w-0 flex-1 overflow-y-auto p-5 pb-28 xl:pb-5">{children}</main>
         </div>
         <BottomNav pathname={pathname} />
 
-        {/* Оверлеи внутри .mes-root — наследуют шрифт и токены темы */}
         <Toasts toasts={toasts} onClose={(id) => setToasts((xs) => xs.filter((x) => x.id !== id))} />
-        <LaunchBatchModal open={launch.open} preselect={launch.preselect} onClose={closeLaunch} />
-        <PalletScanModal open={palletOpen && !!active} onClose={closePallet} />
-        <FinishBatchModal open={finishOpen} onClose={closeFinish} />
+        <LaunchBatchModal open={launch.open} preselect={launch.preselect} onClose={() => setLaunch({ open: false })} />
+        <FinishBatchModal open={finishOpen} onClose={() => setFinishOpen(false)} />
+        <MoreOperationsModal open={moreOpen} onClose={() => setMoreOpen(false)} />
+        <SimDrawer open={simOpen} onClose={() => setSimOpen(false)} />
       </div>
     </MesUiContext.Provider>
   )
 }
 
-/* ─── Header ─── */
+/* ─── Верхняя панель: только контекст производства ─── */
 
-function Clock() {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 1000)
-    return () => window.clearInterval(id)
-  }, [])
-  return (
-    <div className="text-right leading-tight">
-      <div className="text-[22px] font-bold tabular-nums text-mes-ink">{now.toLocaleTimeString("ru-RU")}</div>
-      <div className="text-[13px] text-mes-ink-3">{now.toLocaleDateString("ru-RU", { weekday: "short", day: "2-digit", month: "long" })}</div>
-    </div>
-  )
-}
-
-function Header() {
+function TopBar({ onSim }: { onSim: () => void }) {
   const { state, active } = useMes()
-  const line = LINE_LABEL[state.line]
-  const eq: { key: keyof typeof state.equipment; label: string; icon: LucideIcon }[] = [
-    { key: "printer", label: "Принтер", icon: Printer },
-    { key: "camera", label: "Камера", icon: Camera },
-    { key: "scanner", label: "Сканер", icon: ScanLine },
-    { key: "gis", label: "ГИС МТ", icon: Cloud },
-  ]
   return (
-    <header className="flex h-[76px] shrink-0 items-center gap-4 border-b border-mes-line bg-mes-card px-4 sm:px-6">
+    <header className="flex h-[72px] shrink-0 items-center gap-6 border-b border-mes-line bg-mes-card px-5">
       <Link href="/mes" className="flex items-center gap-3">
-        <span className="flex size-12 items-center justify-center rounded-xl bg-mes-olive-strong text-[15px] font-black tracking-tight text-white shadow-[inset_0_-3px_0_rgb(0_0_0/0.18)]">MES</span>
-        <span className="hidden leading-tight md:block">
-          <span className="block text-[18px] font-bold text-mes-ink">SCADA System MES</span>
-          <span className="block text-[13px] text-mes-ink-3">{state.settings.lineName}</span>
-        </span>
+        <span className="flex size-11 items-center justify-center rounded-xl bg-mes-olive-strong text-[14px] font-black text-white">MES</span>
+        <span className="hidden whitespace-nowrap text-[18px] font-bold text-mes-ink xl:block">SCADA System MES</span>
       </Link>
-
-      <div className="mx-2 hidden h-10 w-px bg-mes-line lg:block" />
-
-      <div className="flex min-w-0 items-center gap-3">
-        <StatusPill tone={line.tone} size="lg" pulse={state.line === "running" || state.line === "stopped"}>
-          {line.label}
-        </StatusPill>
-        {active && (
-          <span className="hidden truncate text-[16px] text-mes-ink-2 2xl:inline">
-            Партия <b className="text-mes-ink">№ {active.number}</b>
-          </span>
-        )}
-      </div>
-
-      <div className="ml-auto hidden items-center gap-1.5 xl:flex">
-        {eq.map(({ key, label, icon: Icon }) => {
-          const ok = state.equipment[key]
-          return (
-            <Link
-              key={key}
-              href="/mes/settings?section=equipment"
-              className={cn("flex h-11 items-center gap-2 rounded-xl px-3 text-[14px] font-semibold ring-1", ok ? "bg-mes-panel text-mes-ink-2 ring-mes-line" : "bg-mes-red-soft text-mes-red-strong ring-mes-red/40")}
-              title={ok ? `${label}: на связи` : `${label}: нет связи`}
-            >
-              <Icon className="size-5" />
-              <span className="hidden 2xl:inline">{label}</span>
-              <span className={cn("size-2.5 rounded-full", ok ? "bg-mes-olive" : "animate-pulse bg-mes-red")} />
-            </Link>
-          )
-        })}
-      </div>
-
-      <div className="mx-2 hidden h-10 w-px bg-mes-line xl:block" />
-
-      <div className="ml-auto flex items-center gap-4 xl:ml-0">
-        <div className="hidden items-center gap-2.5 lg:flex">
-          <span className="flex size-11 items-center justify-center rounded-full bg-mes-olive-soft text-mes-olive-deep">
-            <UserRound className="size-6" />
-          </span>
-          <span className="leading-tight">
-            <span className="block text-[15px] font-semibold text-mes-ink">{state.settings.operator}</span>
-            <span className="block text-[13px] text-mes-ink-3">Оператор · смена 2</span>
-          </span>
-        </div>
-        <Clock />
+      <Sep />
+      <span className="hidden lg:contents">
+        <Field label="Линия" value={state.settings.lineName} />
+        <Sep />
+      </span>
+      {active ? (
+        <>
+          <Field label="Партия" value={`№ ${active.number}`} />
+          <Sep />
+          <div className="flex min-w-0 items-center gap-3">
+            <VolumeBadge volume={active.volume} />
+            <Field label={`Номенклатура · палета ${active.palletSize}`} value={active.nomenclatureName} truncate />
+          </div>
+        </>
+      ) : (
+        <Field label="Партия" value="не запущена" muted />
+      )}
+      <div className="ml-auto flex items-center gap-4">
+        <button
+          type="button"
+          onClick={onSim}
+          className="flex h-12 items-center gap-2 rounded-xl border-2 border-dashed border-mes-amber/60 bg-mes-amber-soft px-4 text-[15px] font-bold text-mes-amber-strong"
+          title="Прототип работает на симуляции камеры и сканера"
+        >
+          <FlaskConical className="size-5" /> Симуляция
+        </button>
+        <span className="hidden text-right leading-tight 2xl:block">
+          <span className="block text-[13px] text-mes-ink-3">Оператор</span>
+          <span className="block text-[15px] font-semibold text-mes-ink">{state.settings.operator}</span>
+        </span>
       </div>
     </header>
   )
 }
 
-/* ─── Полоса аварии: видна на любом экране, пока проблема не решена ─── */
-
-function AlarmBar({ onScan }: { onScan: () => void }) {
-  const { state, active } = useMes()
-  const pathname = usePathname()
-  const offline = (Object.entries(state.equipment) as [string, boolean][]).filter(([, ok]) => !ok)
-  const names: Record<string, string> = { printer: "принтер", camera: "камера", scanner: "сканер", gis: "ГИС МТ" }
-
-  let content: { tone: "critical" | "warning"; text: string; action?: ReactNode } | null = null
-  if (state.line === "stopped") {
-    const reason = offline.length ? `нет связи: ${offline.map(([k]) => names[k]).join(", ")}` : "накопитель заполнен, палета ждёт палетный код"
-    content = {
-      tone: "critical",
-      text: `Аварийный стоп линии — ${reason}`,
-      action: !offline.length && active ? <AlarmBtn onClick={onScan}>Сканировать палету</AlarmBtn> : <AlarmLink href="/mes/settings?section=equipment">Оборудование</AlarmLink>,
-    }
-  } else if (offline.length) {
-    content = { tone: "warning", text: `Нет связи: ${offline.map(([k]) => names[k]).join(", ")}`, action: <AlarmLink href="/mes/settings?section=equipment">Оборудование</AlarmLink> }
-  } else if (active && pathname !== "/mes" && ["awaiting_code", "scan_error", "code_used"].includes(state.pallet.state)) {
-    content = { tone: "warning", text: "Палета собрана — отсканируйте палетный код", action: <AlarmBtn onClick={onScan}>Сканировать палету</AlarmBtn> }
-  }
-  if (!content) return null
-  const t = TONE[content.tone]
+function Sep() {
+  return <span className="hidden h-9 w-px shrink-0 bg-mes-line md:block" />
+}
+function Field({ label, value, muted, truncate }: { label: string; value: string; muted?: boolean; truncate?: boolean }) {
   return (
-    <div className={cn("flex min-h-14 shrink-0 items-center gap-3 px-4 sm:px-6", t.solid)}>
-      <AlertTriangle className="size-6 shrink-0" />
-      <p className="flex-1 text-[17px] font-semibold">{content.text}</p>
-      {content.action}
-    </div>
+    <span className={cn("min-w-0 leading-tight", truncate && "max-w-[520px]")}>
+      <span className="block text-[12px] font-semibold uppercase tracking-[0.05em] text-mes-ink-3">{label}</span>
+      <span className={cn("block text-[18px] font-bold", muted ? "text-mes-ink-3" : "text-mes-ink", truncate && "truncate")}>{value}</span>
+    </span>
   )
 }
 
-function AlarmBtn({ onClick, children }: { onClick: () => void; children: ReactNode }) {
-  return (
-    <button type="button" onClick={onClick} className="h-11 rounded-xl bg-white/95 px-4 text-[15px] font-bold text-mes-ink hover:bg-white">
-      {children}
-    </button>
-  )
-}
-function AlarmLink({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <Link href={href} className="flex h-11 items-center rounded-xl bg-white/95 px-4 text-[15px] font-bold text-mes-ink hover:bg-white">
-      {children}
-    </Link>
-  )
-}
+/* ─── Навигация ─── */
 
-/* ─── Навигация: левый рейл на широком экране, нижняя панель на узком ─── */
-
-function isActive(pathname: string, href: string) {
-  return href === "/mes" ? pathname === "/mes" : pathname.startsWith(href)
-}
-
-function useNavBadges() {
-  const { state } = useMes()
-  const hourAgo = Date.now() - 3600_000
-  return {
-    "/mes/events": state.events.filter((e) => e.severity === "critical" && e.at > hourAgo).length,
-  } as Record<string, number>
-}
+const isActive = (pathname: string, href: string) => (href === "/mes" ? pathname === "/mes" : pathname.startsWith(href))
 
 function Sidebar({ pathname }: { pathname: string }) {
-  const badges = useNavBadges()
   return (
-    <nav className="hidden w-[116px] shrink-0 flex-col gap-1.5 border-r border-mes-line bg-mes-card p-2.5 xl:flex">
+    <nav className="hidden w-[104px] shrink-0 flex-col gap-1 border-r border-mes-line bg-mes-card p-2 xl:flex">
       {NAV.map(({ href, label, icon: Icon }) => {
         const on = isActive(pathname, href)
         return (
@@ -298,22 +207,15 @@ function Sidebar({ pathname }: { pathname: string }) {
             key={href}
             href={href}
             className={cn(
-              "relative flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-2xl px-1 text-center text-[13px] font-semibold transition-colors",
+              "flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-xl px-0.5 text-center text-[12px] font-semibold",
               on ? "bg-mes-olive-soft text-mes-olive-deep" : "text-mes-ink-2 hover:bg-mes-panel",
             )}
           >
-            {on && <span className="absolute inset-y-4 left-0 w-1 rounded-r-full bg-mes-olive-strong" />}
-            <Icon className={cn("size-7", on ? "text-mes-olive-strong" : "text-mes-ink-3")} strokeWidth={2.1} />
+            <Icon className={cn("size-6", on ? "text-mes-olive-strong" : "text-mes-ink-3")} />
             {label}
-            {!!badges[href] && <span className="absolute right-3 top-3 flex h-6 min-w-6 items-center justify-center rounded-full bg-mes-red px-1.5 text-[12px] font-bold text-white">{badges[href]}</span>}
           </Link>
         )
       })}
-      <div className="mt-auto rounded-xl bg-mes-panel p-2 text-center text-[11px] leading-tight text-mes-ink-3">
-        v1.0
-        <br />
-        прототип
-      </div>
     </nav>
   )
 }
@@ -325,7 +227,7 @@ function BottomNav({ pathname }: { pathname: string }) {
         const on = isActive(pathname, href)
         return (
           <Link key={href} href={href} className={cn("flex flex-col items-center justify-center gap-1 text-[12px] font-semibold", on ? "text-mes-olive-deep" : "text-mes-ink-3")}>
-            <Icon className={cn("size-6", on && "text-mes-olive-strong")} />
+            <Icon className="size-6" />
             <span className="truncate">{label}</span>
           </Link>
         )
@@ -334,24 +236,21 @@ function BottomNav({ pathname }: { pathname: string }) {
   )
 }
 
-/* ─── Уведомления ─── */
+/* ─── Уведомления: только подтверждение выполненных операций ─── */
 
 const TOAST_ICON = { success: CheckCircle2, warning: AlertTriangle, critical: XCircle, info: Info, neutral: Info }
 
 function Toasts({ toasts, onClose }: { toasts: Toast[]; onClose: (id: string) => void }) {
   return (
-    <div className="pointer-events-none fixed right-4 top-[92px] z-[60] flex w-[min(440px,calc(100vw-2rem))] flex-col gap-3">
+    <div className="pointer-events-none fixed bottom-24 left-4 z-[60] flex w-[min(520px,calc(100vw-2rem))] flex-col-reverse gap-2 xl:bottom-6 xl:left-[128px]">
       {toasts.map((t) => {
         const Icon = TOAST_ICON[t.tone]
-        const tone = TONE[t.tone]
         return (
-          <div key={t.id} className={cn("mes-slide-in pointer-events-auto flex items-start gap-3 rounded-2xl border bg-mes-card p-4 shadow-xl", tone.border)}>
-            <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", tone.soft)}>
-              <Icon className={cn("size-6", tone.text)} />
-            </span>
-            <div className="min-w-0 flex-1 pt-0.5">
+          <div key={t.id} className={cn("pointer-events-auto flex items-center gap-3 rounded-2xl border bg-mes-card px-4 py-3 shadow-lg", TONE[t.tone].border)}>
+            <Icon className={cn("size-6 shrink-0", TONE[t.tone].text)} />
+            <div className="min-w-0 flex-1">
               <p className="text-[16px] font-semibold text-mes-ink">{t.title}</p>
-              {t.text && <p className="mt-0.5 text-[14px] text-mes-ink-2">{t.text}</p>}
+              {t.text && <p className="truncate text-[14px] text-mes-ink-2">{t.text}</p>}
             </div>
             <button type="button" onClick={() => onClose(t.id)} className="flex size-11 items-center justify-center rounded-xl text-mes-ink-3 hover:bg-mes-panel" aria-label="Закрыть">
               <X className="size-5" />
@@ -360,5 +259,77 @@ function Toasts({ toasts, onClose }: { toasts: Toast[]; onClose: (id: string) =>
         )
       })}
     </div>
+  )
+}
+
+function Group({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  return (
+    <section className="border-t border-mes-line pt-5 first:border-0 first:pt-0">
+      <h3 className="text-[15px] font-bold uppercase tracking-[0.04em] text-mes-ink-2">{title}</h3>
+      {hint && <p className="mt-1 text-[14px] text-mes-ink-3">{hint}</p>}
+      <div className="mt-3 flex flex-wrap gap-2">{children}</div>
+    </section>
+  )
+}
+
+/* ─── Симуляция: отделена от производственного интерфейса ─── */
+
+function SimDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { state, active, sim } = useMes()
+  const { emitScan } = useMesUi()
+  const s = state.sim
+  const b = (label: string, fn: () => void, disabled?: boolean) => (
+    <Btn key={label} onClick={fn} disabled={disabled}>
+      {label}
+    </Btn>
+  )
+  return (
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title="Симуляция оборудования"
+      subtitle="Не производственный режим. Интеграция с камерой ещё не подключена — события камеры и ручного сканера генерируются здесь по той же FIFO-модели."
+      width="max-w-[640px]"
+    >
+      <div className="flex flex-col gap-5">
+        <Group title="Камера" hint={active ? undefined : "Запустите партию — вне партии считывания не учитываются"}>
+          <div className="w-full rounded-2xl ring-1 ring-mes-line">
+            <ToggleRow checked={s.flow} onChange={(v) => sim.set({ flow: v })} label="Поток бутылей под камерой" description="Выключите, чтобы смоделировать простой линии" />
+            <ToggleRow checked={s.cameraLink} onChange={(v) => sim.set({ cameraLink: v })} label="Связь с камерой" description={`Без связи через ${state.settings.cameraTimeoutSec} с появится предупреждение`} />
+          </div>
+          <Segmented
+            className="w-full"
+            value={s.intervalMs}
+            onChange={(v) => sim.set({ intervalMs: v })}
+            options={[
+              { value: 800, label: "0,8 с", sub: "на бутыль" },
+              { value: 2500, label: "2,5 с", sub: "на бутыль" },
+              { value: 6000, label: "6 с", sub: "на бутыль" },
+            ]}
+          />
+          {b("+1 бутыль", sim.bottle, !active || !s.cameraLink)}
+          {b("Добрать палету", sim.fillPallet, !active || !s.cameraLink)}
+          {b("NoRead", sim.noRead, !active || !s.cameraLink)}
+          {b("Повторный код", sim.duplicate, !active || !s.cameraLink)}
+          {b("Чужой GTIN", sim.foreign, !active || !s.cameraLink)}
+        </Group>
+        <Group title="Ручной сканер · DataMatrix" hint="Скан уходит на активный экран, как с USB-сканера">
+          {b("Код из текущей палеты", () => emitScan(sim.code("queued")))}
+          {b("Агрегированный код", () => emitScan(sim.code("aggregated")))}
+          {b("Удалённый код", () => emitScan(sim.code("removed")))}
+          {b("Незарегистрированный код", () => emitScan(sim.code("unknown")))}
+          {b("Другая номенклатура", () => emitScan(sim.code("foreign")))}
+          {b("Другая партия", () => emitScan(sim.code("other_batch")))}
+          {b("Нечитаемый", () => emitScan(sim.code("garbage")))}
+        </Group>
+        <Group title="Ручной сканер · SSCC палеты">
+          {b("Новая этикетка", () => emitScan(sim.sscc("new")))}
+          {b("Повтор последней", () => emitScan(sim.sscc("last")))}
+          {b("Этикетка другой палеты", () => emitScan(sim.sscc("used")))}
+          {b("Ошибка контрольной цифры", () => emitScan(sim.sscc("bad_check")))}
+          {b("Мусор", () => emitScan(sim.sscc("garbage")))}
+        </Group>
+      </div>
+    </Drawer>
   )
 }

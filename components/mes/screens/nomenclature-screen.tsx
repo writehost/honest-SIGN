@@ -66,7 +66,7 @@ export function NomenclatureScreen() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     {active?.nomenclatureId === n.id && (
-                      <StatusPill tone="success" size="sm" pulse>
+                      <StatusPill tone="success" size="sm">
                         На линии
                       </StatusPill>
                     )}

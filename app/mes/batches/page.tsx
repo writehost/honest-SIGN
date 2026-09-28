@@ -1,5 +1,10 @@
+import { Suspense } from "react"
 import { BatchesScreen } from "@/components/mes/screens/batches-screen"
 
 export default function Page() {
-  return <BatchesScreen />
+  return (
+    <Suspense>
+      <BatchesScreen />
+    </Suspense>
+  )
 }

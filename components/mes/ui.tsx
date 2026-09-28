@@ -105,7 +105,7 @@ export function Btn({
 
 /* ─── Статусы ─── */
 
-export function StatusPill({ tone, children, size = "md", pulse, className }: { tone: Tone; children: ReactNode; size?: "sm" | "md" | "lg"; pulse?: boolean; className?: string }) {
+export function StatusPill({ tone, children, size = "md", className }: { tone: Tone; children: ReactNode; size?: "sm" | "md" | "lg"; className?: string }) {
   const t = TONE[tone]
   return (
     <span
@@ -120,9 +120,7 @@ export function StatusPill({ tone, children, size = "md", pulse, className }: { 
         className,
       )}
     >
-      <span className={cn("relative size-2.5 rounded-full", t.dot)}>
-        {pulse && <span className={cn("absolute inset-0 animate-ping rounded-full", t.dot)} />}
-      </span>
+      <span className={cn("size-2.5 rounded-full", t.dot)} />
       {children}
     </span>
   )
@@ -132,7 +130,7 @@ export function VolumeBadge({ volume, size = "md" }: { volume: Volume; size?: "s
   return (
     <span
       className={cn(
-        "inline-flex items-center justify-center rounded-xl font-bold tabular-nums",
+        "inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-xl font-bold tabular-nums",
         volume === 19 ? "bg-mes-ink text-white" : "bg-mes-blue-soft text-mes-blue ring-1 ring-mes-blue/30",
         size === "sm" && "h-7 min-w-12 px-2 text-[13px]",
         size === "md" && "h-10 min-w-16 px-3 text-[17px]",
@@ -297,7 +295,7 @@ export function Modal({
   const t = TONE[tone]
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-mes-ink/45 p-4 backdrop-blur-[2px] sm:p-8" onPointerDown={(e) => dismissable && e.target === e.currentTarget && onClose()}>
-      <div className={cn("mes-fade-up flex max-h-full w-full flex-col overflow-hidden rounded-3xl bg-mes-card shadow-2xl", width)}>
+      <div role="dialog" aria-modal="true" className={cn("flex max-h-full w-full flex-col overflow-hidden rounded-3xl bg-mes-card shadow-2xl", width)}>
         <header className="flex items-start gap-4 border-b border-mes-line px-7 py-5">
           {Icon && (
             <span className={cn("flex size-14 shrink-0 items-center justify-center rounded-2xl", t.soft)}>
@@ -326,7 +324,7 @@ export function Drawer({ open, onClose, title, subtitle, footer, children, width
   if (!open) return null
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-mes-ink/35" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={cn("mes-slide-in flex h-full w-full flex-col bg-mes-card shadow-2xl", width)}>
+      <div role="dialog" aria-modal="true" className={cn("flex h-full w-full flex-col bg-mes-card shadow-2xl", width)}>
         <header className="flex items-start gap-4 border-b border-mes-line px-7 py-5">
           <div className="min-w-0 flex-1">
             <h2 className="text-[24px] font-bold text-mes-ink">{title}</h2>

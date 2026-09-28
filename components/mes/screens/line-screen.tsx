@@ -1,368 +1,382 @@
 "use client"
 
-import Link from "next/link"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import {
-  AlertOctagon,
-  CheckCircle2,
-  ChevronRight,
-  CircleSlash,
-  Flag,
-  Gauge,
-  Layers,
-  Package,
-  PackageCheck,
-  Pause,
-  Play,
-  QrCode,
-  ScanBarcode,
-  ScanLine,
-  ScrollText,
-  Timer,
-  XCircle,
-} from "lucide-react"
+import { AlertTriangle, Flag, MoreHorizontal, PackageCheck, Play, ScanBarcode, ScanLine, WifiOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { EventRow } from "../event-row"
-import { CODE_STATUS_LABEL, LINE_LABEL, PALLET_LABEL, fmtDuration, fmtNum, fmtTime, formatSscc, shortCode, useMes, type PalletState } from "../store"
-import { Btn, Card, Kpi, ProgressBar, StatusPill, TONE, VolumeBadge } from "../ui"
-import { useMesUi } from "../ui-context"
+import {
+  batchTotal,
+  cameraSilenceMs,
+  fmtAgo,
+  fmtNum,
+  fmtTime,
+  formatSscc,
+  isCameraOnline,
+  parseDataMatrix,
+  shortCode,
+  useMes,
+  useNow,
+} from "../store"
+import { Btn, TONE, TextInput } from "../ui"
+import { useMesUi, useScanHandler } from "../ui-context"
 
 export function LineScreen() {
-  const { active } = useMes()
+  const { active, scanSscc } = useMes()
+  const { inspectCode } = useMesUi()
+  const ssccInput = useRef<HTMLInputElement>(null)
+
+  // Результат приёма SSCC виден в карточке палеты — отдельное уведомление не нужно
+  const submitSscc = (raw: string) => {
+    scanSscc(raw)
+  }
+
+  // Сканы вне поля ввода: DataMatrix → проверка на экране «Коды», остальное — как SSCC
+  useScanHandler((raw) => {
+    if (parseDataMatrix(raw)) inspectCode(raw)
+    else if (active) submitSscc(raw)
+  })
+
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-      <div className="flex min-w-0 flex-col gap-5">
+    <div className="grid gap-5 xl:h-full xl:grid-cols-[minmax(0,1fr)_380px_300px]">
+      <div className="flex min-h-0 min-w-0 flex-col gap-5">
+        <CameraStatus />
         {active ? (
           <>
-            <BatchStrip />
-            <KpiRow />
-            <AggregationCard />
+            <PalletCard inputRef={ssccInput} onSubmit={submitSscc} />
+            <Counters />
+            <BatchEvents />
           </>
         ) : (
-          <IdleHero />
+          <IdleCard />
         )}
       </div>
-      <ActionPanel />
+      <PalletCodes />
+      <ActionPanel onConfirmPallet={() => ssccInput.current?.focus()} />
     </div>
   )
 }
 
-/* ─── Партия ─── */
+/* ─── Камера: сообщаем только о проблемах ─── */
 
-function BatchStrip() {
-  const { active, activeNomenclature } = useMes()
-  if (!active) return null
+function CameraStatus() {
+  const { state, active, dismissAlert } = useMes()
+  const router = useRouter()
+  const now = useNow()
+  const online = isCameraOnline(state, now)
+  if (online && state.alerts.length === 0) return null
+  const shown = state.alerts.slice(0, 2)
   return (
-    <section className="flex flex-wrap items-center gap-5 rounded-2xl border border-mes-line bg-mes-card p-5">
-      <VolumeBadge volume={active.volume} size="lg" />
-      <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-semibold uppercase tracking-[0.05em] text-mes-ink-3">Активная партия № {active.number}</p>
-        <p className="mt-1 truncate text-[26px] font-bold leading-tight text-mes-ink">{active.nomenclatureName}</p>
-        <p className="mt-1 text-[15px] text-mes-ink-3">
-          {activeNomenclature?.sku} · GTIN {activeNomenclature?.gtin}
-        </p>
-      </div>
-      <dl className="grid grid-cols-3 gap-2 text-center">
-        {[
-          { k: "Старт", v: fmtTime(active.startedAt).slice(0, 5), icon: Play },
-          { k: "В работе", v: fmtDuration(Date.now() - active.startedAt), icon: Timer },
-          { k: "Палета", v: `${active.palletSize} шт.`, icon: Package },
-        ].map(({ k, v, icon: Icon }) => (
-          <div key={k} className="min-w-[118px] rounded-xl bg-mes-panel px-3 py-2.5 ring-1 ring-mes-line">
-            <dt className="flex items-center justify-center gap-1.5 text-[12px] font-semibold uppercase text-mes-ink-3">
-              <Icon className="size-3.5" />
-              {k}
-            </dt>
-            <dd className="mt-0.5 text-[19px] font-bold tabular-nums text-mes-ink">{v}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  )
-}
-
-function KpiRow() {
-  const { active } = useMes()
-  if (!active) return null
-  const goodPct = active.applied ? Math.round((active.good / active.applied) * 1000) / 10 : 100
-  return (
-    <div className="grid grid-cols-2 gap-4 2xl:grid-cols-4">
-      <Kpi label="Нанесено кодов" value={fmtNum(active.applied)} icon={QrCode} tone="info" sub={active.manualAdded ? `в т.ч. вручную: ${active.manualAdded}` : "принтер + камера"} />
-      <Kpi label="Годные бутыли" value={fmtNum(active.good)} icon={CheckCircle2} tone="success" sub={`${goodPct.toLocaleString("ru-RU")} % от нанесённых`} />
-      <Kpi label="Брак / удалено" value={fmtNum(active.rejected + active.removed)} icon={CircleSlash} tone={active.rejected + active.removed > 0 ? "warning" : "neutral"} sub={`брак камеры ${active.rejected} · удалено ${active.removed}`} />
-      <Kpi label="Палет агрегировано" value={fmtNum(active.pallets)} icon={PackageCheck} tone="neutral" sub={`${fmtNum(active.pallets * active.palletSize)} бут. в палетах`} />
-    </div>
-  )
-}
-
-/* ─── Агрегация: главный визуальный блок ─── */
-
-const BANNER: Partial<Record<PalletState, { icon: typeof ScanBarcode; text: string; sub: string }>> = {
-  awaiting_code: { icon: ScanBarcode, text: "Палета собрана — отсканируйте палетный код", sub: "Бутыли продолжают поступать в накопитель" },
-  scan_error: { icon: XCircle, text: "Ошибка сканирования палетного кода", sub: "Повторите скан SSCC-этикетки" },
-  code_used: { icon: AlertOctagon, text: "Палетный код уже использован", sub: "Возьмите новую этикетку и повторите скан" },
-  closed_ok: { icon: PackageCheck, text: "Палета успешно агрегирована", sub: "Формируется следующая палета" },
-}
-
-function AggregationCard() {
-  const { state, active } = useMes()
-  const { openPalletScan } = useMesUi()
-  if (!active) return null
-  const p = state.pallet
-  const size = active.palletSize
-  const count = p.items.length
-  const st = PALLET_LABEL[p.state]
-  const banner = BANNER[p.state]
-  const needsScan = p.state === "awaiting_code" || p.state === "scan_error" || p.state === "code_used"
-  const remaining = size - count
-  const eta = Math.ceil((remaining * 60) / state.settings.lineSpeed)
-  const lastPallet = Object.values(state.pallets)
-    .filter((x) => x.batchId === active.id)
-    .sort((a, b) => b.closedAt - a.closedAt)[0]
-  const bufferPct = state.buffer.length / state.settings.bufferLimit
-
-  return (
-    <section className={cn("overflow-hidden rounded-2xl border-2 bg-mes-card transition-colors", needsScan ? (p.state === "awaiting_code" ? "border-mes-amber" : "border-mes-red") : p.state === "closed_ok" ? "border-mes-olive" : "border-mes-line")}>
-      <header className="flex min-h-14 items-center justify-between gap-3 border-b border-mes-line px-5">
-        <h2 className="flex items-center gap-2.5 text-[15px] font-semibold uppercase tracking-[0.04em] text-mes-ink-2">
-          <Layers className="size-5 text-mes-olive-strong" /> Агрегация · палета № {p.index}
-        </h2>
-        <StatusPill tone={st.tone} pulse={needsScan}>
-          {st.label}
-        </StatusPill>
-      </header>
-
-      {banner && (
-        <div className={cn("flex flex-wrap items-center gap-4 px-5 py-4", TONE[st.tone].solid)}>
-          <banner.icon className="size-10 shrink-0" />
+    <div className="flex flex-col gap-2">
+      {!online && (
+        <div className={cn("flex items-center gap-4 rounded-2xl px-5 py-4", TONE.critical.solid)}>
+          <WifiOff className="size-8 shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="text-[24px] font-bold leading-tight">{banner.text}</p>
-            <p className="text-[15px] opacity-90">{p.state === "closed_ok" && p.lastScan ? `${formatSscc(p.lastScan.code)} · ${banner.sub}` : banner.sub}</p>
+            <p className="text-[20px] font-bold">Нет связи с камерой — {Math.floor(cameraSilenceMs(state, now) / 1000)} с</p>
+            <p className="text-[15px] opacity-95">
+              {active ? "Коды не регистрируются. " : ""}Проверьте питание и сетевое подключение камеры ({state.settings.cameraAddress}).
+            </p>
           </div>
-          {needsScan && (
-            <button type="button" onClick={openPalletScan} className="mes-pulse flex h-16 items-center gap-3 rounded-2xl bg-white px-6 text-[19px] font-bold text-mes-ink shadow-lg">
-              <ScanBarcode className="size-7" /> Сканировать палету
+        </div>
+      )}
+      {shown.map((a) => (
+        <div key={a.id} className="flex items-center gap-4 rounded-2xl border-2 border-mes-amber/60 bg-mes-amber-soft px-5 py-3">
+          <AlertTriangle className="size-7 shrink-0 text-mes-amber-strong" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[18px] font-bold text-mes-ink">
+              {a.title} <span className="ml-2 text-[15px] font-medium tabular-nums text-mes-ink-3">{fmtTime(a.at)}</span>
+            </p>
+            <p className="text-[15px] text-mes-ink-2">{a.detail}</p>
+          </div>
+          <Btn icon={ScanLine} onClick={() => router.push("/mes/codes")}>
+            Проверить бутыль
+          </Btn>
+          <Btn onClick={() => dismissAlert(a.id)}>Принято</Btn>
+        </div>
+      ))}
+      {state.alerts.length > shown.length && <p className="px-2 text-[14px] font-semibold text-mes-amber-strong">Ещё {state.alerts.length - shown.length} событий камеры требуют проверки</p>}
+    </div>
+  )
+}
+
+/* ─── Текущая палета: главный показатель + приём SSCC ─── */
+
+function PalletCard({ inputRef, onSubmit }: { inputRef: React.RefObject<HTMLInputElement | null>; onSubmit: (raw: string) => void }) {
+  const { state, active, pallet, requestPartial } = useMes()
+  const now = useNow()
+  const [value, setValue] = useState("")
+  const awaiting = !!pallet?.awaiting
+
+  // Пока ждём SSCC, поле сканера держит фокус (если оператор не работает с другим полем или окном)
+  useEffect(() => {
+    if (!awaiting) return
+    inputRef.current?.focus()
+    const id = window.setInterval(() => {
+      const el = document.activeElement
+      if ((!el || el === document.body) && !document.querySelector('[role="dialog"]')) inputRef.current?.focus()
+    }, 500)
+    return () => window.clearInterval(id)
+  }, [awaiting, inputRef])
+
+  if (!active || !pallet) return null
+  const pct = (pallet.inPallet / pallet.size) * 100
+  const fb = state.ssccFeedback && now - state.ssccFeedback.at < 20_000 ? state.ssccFeedback : undefined
+  const partial = state.partialRequested && !pallet.full
+  const last = state.lastClosed
+
+  return (
+    <section className={cn("overflow-hidden rounded-2xl border-2 bg-mes-card", awaiting ? "border-mes-amber" : "border-mes-line")}>
+      {awaiting && (
+        <div className="flex items-center gap-3 bg-mes-amber px-6 py-3 text-white">
+          <ScanBarcode className="size-8 shrink-0" />
+          <p className="flex-1 text-[24px] font-bold">
+            {partial ? `Палета № ${pallet.no} закрывается неполной (${pallet.inPallet} из ${pallet.size}). Отсканируйте палетный код` : `Палета № ${pallet.no} собрана. Отсканируйте палетный код`}
+          </p>
+          {partial && (
+            <button type="button" onClick={() => requestPartial(false)} className="h-12 rounded-xl bg-white/95 px-4 text-[15px] font-bold text-mes-ink">
+              Отменить
             </button>
           )}
         </div>
       )}
 
-      <div className="grid items-start gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="flex min-w-0 flex-col gap-5">
-          <PalletVisual count={needsScan ? size : count} size={size} highlight={needsScan ? "warning" : p.state === "closed_ok" && count === 0 ? "success" : undefined} />
-          <RecentBottles />
-        </div>
-
-        <div className="flex flex-col gap-4">
+      <div className="px-6 pb-5 pt-4">
+        <div className="flex items-end justify-between gap-6">
           <div>
-            <p className="text-[14px] font-semibold uppercase tracking-[0.05em] text-mes-ink-3">Бутылей в палете</p>
-            <p className="mt-1 font-bold leading-none tabular-nums text-mes-ink">
-              <span className="text-[84px] tracking-tight">{needsScan ? size : count}</span>
-              <span className="text-[40px] text-mes-ink-3"> / {size}</span>
+            <p className="text-[15px] font-semibold uppercase tracking-[0.05em] text-mes-ink-2">Бутылей в текущей палете · № {pallet.no}</p>
+            <p className="font-bold leading-none tabular-nums text-mes-ink">
+              <span className="text-[112px] tracking-tight">{pallet.inPallet}</span>
+              <span className="text-[56px] text-mes-ink-3"> из {pallet.size}</span>
             </p>
-            <ProgressBar value={needsScan ? size : count} max={size} tone={needsScan ? "warning" : "success"} className="mt-4 h-5" />
-            <p className="mt-2 text-[16px] text-mes-ink-2">{needsScan ? "Палета полная" : state.line === "running" ? `Осталось ${remaining} бут. · ≈ ${eta} с` : `Осталось ${remaining} бут.`}</p>
           </div>
-
-          <div className="rounded-2xl bg-mes-panel p-4 ring-1 ring-mes-line">
-            <p className="text-[13px] font-semibold uppercase tracking-[0.05em] text-mes-ink-3">Палетный код</p>
-            <p className={cn("mt-1 text-[18px] font-semibold", TONE[st.tone].text)}>{needsScan ? (p.state === "awaiting_code" ? "Ожидается скан" : p.lastScan?.message) : "Будет запрошен после набора"}</p>
-            {lastPallet && (
-              <p className="mt-2 text-[14px] text-mes-ink-3">
-                Последняя закрытая: <span className="font-mono text-mes-ink-2">{formatSscc(lastPallet.code)}</span> · {fmtTime(lastPallet.closedAt).slice(0, 5)}
+          <div className="pb-3 text-right">
+            {pallet.full ? (
+              <p className="text-[26px] font-bold text-mes-amber-strong">Палета собрана</p>
+            ) : (
+              <p className="text-[26px] font-bold text-mes-ink">
+                осталось <span className="tabular-nums">{pallet.size - pallet.inPallet}</span>
               </p>
             )}
-          </div>
-
-          <div className="rounded-2xl bg-mes-panel p-4 ring-1 ring-mes-line">
-            <div className="flex items-baseline justify-between">
-              <p className="text-[13px] font-semibold uppercase tracking-[0.05em] text-mes-ink-3">Накопитель</p>
-              <p className={cn("text-[18px] font-bold tabular-nums", bufferPct >= 0.6 ? "text-mes-amber-strong" : "text-mes-ink")}>
-                {state.buffer.length} / {state.settings.bufferLimit}
-              </p>
-            </div>
-            <ProgressBar value={state.buffer.length} max={state.settings.bufferLimit} tone={bufferPct >= 0.6 ? (bufferPct >= 0.85 ? "critical" : "warning") : "neutral"} className="mt-2 h-2.5" />
-            <p className="mt-2 text-[13px] text-mes-ink-3">При заполнении линия остановится автоматически</p>
+            {pallet.queuedNext > 0 && <p className="mt-1 text-[17px] font-semibold text-mes-ink-2">+{pallet.queuedNext} в очереди на палету № {pallet.no + 1}</p>}
           </div>
         </div>
+        <div className="mt-4 h-7 overflow-hidden rounded-lg bg-mes-line">
+          <div className={cn("h-full rounded-lg transition-[width] duration-300", awaiting ? "bg-mes-amber" : "bg-mes-olive-strong")} style={{ width: `${pct}%` }} />
+        </div>
+
+        {awaiting ? (
+          <form
+            className="mt-5 flex gap-3"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (!value.trim()) return
+              onSubmit(value)
+              setValue("")
+              inputRef.current?.focus()
+            }}
+          >
+            <TextInput ref={inputRef} value={value} onChange={(e) => setValue(e.target.value)} placeholder="Сканер готов — отсканируйте SSCC-этикетку палеты" className="h-[68px] font-mono text-[22px]" autoComplete="off" inputMode="numeric" />
+            <Btn type="submit" size="lg" variant="primary" disabled={!value.trim()} className="min-w-48">
+              Подтвердить
+            </Btn>
+          </form>
+        ) : null}
+
+        {fb ? (
+          <div className={cn("mt-4 flex items-start gap-3 rounded-xl border px-4 py-3", TONE[fb.tone].soft, TONE[fb.tone].border)}>
+            <p className={cn("text-[18px] font-bold", TONE[fb.tone].text)}>{fb.title}</p>
+            <p className="flex-1 pt-0.5 text-[16px] text-mes-ink-2">
+              {fb.message} <span className="font-mono text-[14px] text-mes-ink-3">{fb.code.length === 20 ? formatSscc(fb.code) : fb.code}</span>
+            </p>
+          </div>
+        ) : (
+          !awaiting && (
+            <p className="mt-4 flex items-center gap-2 text-[16px] text-mes-ink-2">
+              <PackageCheck className="size-5 text-mes-olive-strong" />
+              {last ? (
+                <>
+                  Предыдущая: палета № {last.no}{last.partial ? " (неполная)" : ""} · {last.count} бут. · <span className="font-mono text-[15px]">{formatSscc(last.code)}</span> · {fmtTime(last.at)}
+                </>
+              ) : (
+                "Закрытых палет в партии пока нет"
+              )}
+            </p>
+          )
+        )}
       </div>
     </section>
   )
 }
 
-/** Лента последних бутылей: оператор видит поток и может одним касанием открыть код */
-function RecentBottles() {
-  const { state, active } = useMes()
-  const { inspectCode } = useMesUi()
+/* ─── Основные счётчики ─── */
+
+function Counters() {
+  const { active } = useMes()
+  const now = useNow()
   if (!active) return null
-  const recent = Object.values(state.codes)
-    .filter((c) => c.batchId === active.id)
-    .sort((a, b) => b.at - a.at)
-    .slice(0, 5)
+  const total = batchTotal(active)
+  const corrections = [active.manualAdded ? `+${active.manualAdded} вручную` : "", active.removed ? `−${active.removed} удалено` : ""].filter(Boolean).join(" · ")
   return (
-    <div>
-      <p className="mb-2 text-[13px] font-semibold uppercase tracking-[0.05em] text-mes-ink-3">Последние бутыли · коснитесь, чтобы проверить код</p>
-      <div className="divide-y divide-mes-line overflow-hidden rounded-2xl ring-1 ring-mes-line">
-        {recent.map((c) => {
-          const st = CODE_STATUS_LABEL[c.status]
-          return (
-            <button key={c.code} type="button" onClick={() => inspectCode(c.code)} className="flex min-h-14 w-full items-center gap-4 px-4 text-left hover:bg-mes-panel">
-              <span className="w-20 text-[15px] tabular-nums text-mes-ink-3">{fmtTime(c.at)}</span>
-              <span className="min-w-0 flex-1 truncate font-mono text-[15px] text-mes-ink">{shortCode(c.code)}</span>
-              {c.manual && <span className="rounded-md bg-mes-blue-soft px-2 py-0.5 text-[12px] font-semibold text-mes-blue">вручную</span>}
-              <StatusPill tone={st.tone} size="sm">
-                {st.label}
-              </StatusPill>
-            </button>
-          )
-        })}
-      </div>
+    <div className="grid grid-cols-2 gap-4 2xl:grid-cols-4">
+      <Counter label="Нанесено кодов" value={fmtNum(active.applied)} sub="подтверждено камерой" />
+      <Counter label="Всего бутылей в партии" value={fmtNum(total)} sub={corrections || "без корректировок"} subTone={corrections ? "text-mes-amber-strong" : undefined} />
+      <Counter label="Палет агрегировано" value={fmtNum(active.pallets)} sub="закрыто с SSCC" />
+      <Counter small label="Последнее нанесение" value={active.lastCameraAt ? fmtTime(active.lastCameraAt) : "—"} sub={active.lastCameraAt ? fmtAgo(now - active.lastCameraAt) : "камера ещё не передавала коды"} />
     </div>
   )
 }
 
-/** Вид палеты сверху: ярусы по 12 бутылей (4 × 3) */
-function PalletVisual({ count, size, highlight }: { count: number; size: number; highlight?: "warning" | "success" }) {
-  const layers = size / 12
+function Counter({ label, value, sub, subTone, small }: { label: string; value: string; sub: string; subTone?: string; small?: boolean }) {
   return (
-    <div className={cn("grid gap-3", layers === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3")}>
-      {Array.from({ length: layers }, (_, l) => {
-        const inLayer = Math.max(0, Math.min(12, count - l * 12))
-        const done = inLayer === 12
-        return (
-          <div key={l} className={cn("rounded-2xl p-3 ring-1", done ? "bg-mes-olive-tint ring-mes-olive/30" : "bg-mes-panel ring-mes-line")}>
-            <div className="mb-2 flex items-center justify-between text-[13px] font-semibold uppercase text-mes-ink-3">
-              <span>Ярус {l + 1}</span>
-              <span className={cn("tabular-nums", done && "text-mes-olive-deep")}>{inLayer}/12</span>
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-              {Array.from({ length: 12 }, (_, i) => {
-                const idx = l * 12 + i
-                const filled = idx < count
-                const newest = idx === count - 1
-                return (
-                  <span
-                    key={i}
-                    className={cn(
-                      "aspect-square rounded-full transition-colors",
-                      filled
-                        ? highlight === "warning"
-                          ? "bg-mes-amber shadow-[inset_0_-4px_0_rgb(0_0_0/0.15)]"
-                          : "bg-mes-olive-strong shadow-[inset_0_-4px_0_rgb(0_0_0/0.18)]"
-                        : "border-2 border-dashed border-mes-line-strong bg-mes-card",
-                      filled && newest && !highlight && "mes-pop ring-4 ring-mes-olive/30",
-                    )}
-                  >
-                    {filled && <span className="block size-full scale-[0.42] rounded-full bg-white/35" />}
-                  </span>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })}
+    <div className="flex flex-col rounded-2xl border border-mes-line bg-mes-card px-5 py-4">
+      <p className="text-[13px] font-semibold uppercase leading-tight tracking-[0.05em] text-mes-ink-2">{label}</p>
+      <p className={cn("mt-auto pt-2 font-bold leading-none tracking-tight tabular-nums text-mes-ink", small ? "text-[42px]" : "text-[52px]")}>{value}</p>
+      <p className={cn("mt-2 text-[15px] text-mes-ink-3", subTone)}>{sub}</p>
     </div>
+  )
+}
+
+/* ─── События партии: то, что произошло, без декоративных статусов ─── */
+
+function BatchEvents() {
+  const { state, active } = useMes()
+  const router = useRouter()
+  if (!active) return null
+  const list = state.events.filter((e) => e.batchNumber === active.number).slice(0, 30)
+  return (
+    <section className="hidden min-h-[220px] flex-1 flex-col overflow-hidden rounded-2xl border border-mes-line bg-mes-card xl:flex">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-mes-line px-5">
+        <h2 className="text-[14px] font-semibold uppercase tracking-[0.05em] text-mes-ink-2">События партии</h2>
+        <button type="button" onClick={() => router.push("/mes/events")} className="h-10 rounded-lg px-3 text-[14px] font-semibold text-mes-olive-deep hover:bg-mes-olive-soft">
+          Журнал
+        </button>
+      </header>
+      <div className="min-h-0 flex-1 divide-y divide-mes-line overflow-y-auto px-5">
+        {list.map((e) => (
+          <EventRow key={e.id} e={e} compact />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/* ─── Коды текущей палеты: реальные коды в порядке FIFO ─── */
+
+function PalletCodes() {
+  const { state, active, pallet } = useMes()
+  const { inspectCode } = useMesUi()
+  if (!active || !pallet) {
+    return (
+      <section className="order-3 flex flex-col items-center justify-center rounded-2xl border border-mes-line bg-mes-card p-8 text-center text-[16px] text-mes-ink-3 xl:order-none">
+        Коды текущей палеты появятся после начала партии
+      </section>
+    )
+  }
+  const group = state.fifo.slice(0, pallet.size)
+  const next = state.fifo.slice(pallet.size)
+  const Row = ({ code, pos }: { code: string; pos: number }) => {
+    const r = state.codes[code]
+    return (
+      <button type="button" onClick={() => inspectCode(code)} className="grid h-12 w-full grid-cols-[44px_1fr_auto] items-center gap-3 px-4 text-left hover:bg-mes-panel">
+        <span className="text-right text-[16px] font-bold tabular-nums text-mes-ink-3">{pos}</span>
+        <span className="truncate font-mono text-[15px] text-mes-ink">
+          {shortCode(code)}
+          {r?.source === "manual" && <span className="ml-2 rounded bg-mes-blue-soft px-1.5 py-0.5 font-sans text-[12px] font-semibold text-mes-blue">вручную</span>}
+        </span>
+        <span className="text-[14px] tabular-nums text-mes-ink-3">{r ? fmtTime(r.at) : ""}</span>
+      </button>
+    )
+  }
+  return (
+    <section className="order-3 flex min-h-[420px] flex-col overflow-hidden rounded-2xl border border-mes-line bg-mes-card xl:order-none xl:min-h-0">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-mes-line px-4">
+        <h2 className="text-[14px] font-semibold uppercase tracking-[0.05em] text-mes-ink-2">Коды палеты № {pallet.no}</h2>
+        <span className="text-[15px] font-bold tabular-nums text-mes-ink">
+          {pallet.inPallet} / {pallet.size}
+        </span>
+      </header>
+      <div className="grid grid-cols-[44px_1fr_auto] gap-3 border-b border-mes-line bg-mes-panel px-4 py-1.5 text-[12px] font-semibold uppercase text-mes-ink-3">
+        <span className="text-right">№</span>
+        <span>Серийный номер</span>
+        <span>Считан</span>
+      </div>
+      <div className="min-h-0 flex-1 divide-y divide-mes-line overflow-y-auto">
+        {next.length > 0 && (
+          <>
+            <p className="bg-mes-panel px-4 py-1.5 text-[13px] font-semibold text-mes-ink-2">В очереди на палету № {pallet.no + 1} · {next.length}</p>
+            {[...next].reverse().map((c, i) => (
+              <Row key={c} code={c} pos={next.length - i} />
+            ))}
+            <p className="bg-mes-panel px-4 py-1.5 text-[13px] font-semibold text-mes-ink-2">Палета № {pallet.no}</p>
+          </>
+        )}
+        {[...group].reverse().map((c, i) => (
+          <Row key={c} code={c} pos={group.length - i} />
+        ))}
+        {group.length === 0 && <p className="p-6 text-center text-[15px] text-mes-ink-3">Палета пуста — ожидаются считывания камеры</p>}
+      </div>
+    </section>
   )
 }
 
 /* ─── Нет партии ─── */
 
-function IdleHero() {
+function IdleCard() {
   const { state } = useMes()
   const { openLaunch } = useMesUi()
   const last = state.batches.find((b) => b.finishedAt)
   return (
-    <section className="flex flex-col items-center justify-center gap-6 rounded-3xl border-2 border-dashed border-mes-line-strong bg-mes-card px-6 py-20 text-center">
-      <span className="flex size-24 items-center justify-center rounded-3xl bg-mes-olive-soft">
-        <Gauge className="size-12 text-mes-olive-strong" />
-      </span>
+    <section className="flex flex-1 flex-col justify-center gap-6 rounded-2xl border border-mes-line bg-mes-card p-10">
       <div>
-        <h1 className="text-[34px] font-bold text-mes-ink">Линия готова к работе</h1>
-        <p className="mt-2 text-[18px] text-mes-ink-2">Нет активной партии. Запустите партию, чтобы начать нанесение кодов и агрегацию.</p>
+        <p className="text-[15px] font-semibold uppercase tracking-[0.05em] text-mes-ink-3">Партия не запущена</p>
+        <p className="mt-2 text-[20px] text-mes-ink-2">Коды, считанные камерой вне партии, не учитываются.</p>
       </div>
-      <Btn size="xl" variant="primary" icon={Play} onClick={() => openLaunch()} className="min-w-96">
-        Запустить партию
+      <Btn size="xl" variant="primary" icon={Play} onClick={() => openLaunch()} className="self-start px-10">
+        Начать партию
       </Btn>
       {last && (
-        <button type="button" onClick={() => openLaunch(last.nomenclatureId)} className="flex min-h-14 items-center gap-3 rounded-xl px-4 text-[16px] text-mes-ink-2 hover:bg-mes-panel">
-          Повторить последнюю: <b className="text-mes-ink">{last.nomenclatureName}</b> <VolumeBadge volume={last.volume} size="sm" />
-          <ChevronRight className="size-5" />
-        </button>
+        <div className="border-t border-mes-line pt-5 text-[17px] text-mes-ink-2">
+          Последняя партия № <b className="text-mes-ink">{last.number}</b> · {last.nomenclatureName} {last.volume} л · всего {fmtNum(batchTotal(last))} бут. · палет {last.pallets}
+          {last.unaggregated > 0 && <span className="text-mes-amber-strong"> · без агрегации {last.unaggregated}</span>}
+        </div>
       )}
     </section>
   )
 }
 
-/* ─── Правая панель действий ─── */
+/* ─── Боковая панель действий ─── */
 
-function ActionPanel() {
-  const { state, active, pause, resume } = useMes()
-  const { openLaunch, openPalletScan, openFinish } = useMesUi()
+function ActionPanel({ onConfirmPallet }: { onConfirmPallet: () => void }) {
+  const { active, pallet } = useMes()
+  const { openLaunch, openFinish, openMore } = useMesUi()
   const router = useRouter()
-  const line = LINE_LABEL[state.line]
-  const needsScan = ["awaiting_code", "scan_error", "code_used"].includes(state.pallet.state)
-  const bufferFull = state.buffer.length >= state.settings.bufferLimit
-  const eqDown = !state.equipment.printer || !state.equipment.camera
-
+  const awaiting = !!pallet?.awaiting
   return (
-    <aside className="order-first flex flex-col gap-4 xl:sticky xl:top-0 xl:order-none xl:self-start">
-      <div className={cn("rounded-2xl border-2 p-5", TONE[line.tone].soft, TONE[line.tone].border)}>
-        <p className="text-[13px] font-semibold uppercase tracking-[0.05em] text-mes-ink-3">Статус линии</p>
-        <p className={cn("mt-1 flex items-center gap-3 text-[28px] font-bold", TONE[line.tone].text)}>
-          <span className={cn("size-4 rounded-full", TONE[line.tone].dot, state.line === "running" && "animate-pulse")} />
-          {line.label}
-        </p>
-        <p className="mt-1 text-[15px] text-mes-ink-2">{active ? `${state.settings.lineSpeed} бут/мин · ${state.settings.lineName}` : state.settings.lineName}</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-1">
-        {!active && (
-          <Btn size="xl" variant="primary" icon={Play} onClick={() => openLaunch()} className="col-span-2 xl:col-span-1">
-            Старт партии
-          </Btn>
-        )}
-        {active && state.line === "running" && (
-          <Btn size="xl" variant="warning" icon={Pause} onClick={pause}>
-            Пауза
-          </Btn>
-        )}
-        {active && state.line !== "running" && (
-          <Btn size="xl" variant="primary" icon={Play} onClick={resume} disabled={bufferFull || eqDown} sub={bufferFull ? "сначала отсканируйте палету" : eqDown ? "нет связи с оборудованием" : undefined}>
-            Продолжить
-          </Btn>
-        )}
-        {active && (
-          <Btn size="xl" variant={needsScan ? "dark" : "secondary"} icon={ScanBarcode} onClick={openPalletScan} className={cn(needsScan && "mes-pulse")}>
-            Скан палеты
-          </Btn>
-        )}
-        <Btn size="lg" icon={ScanLine} sub="проверка · добавление · удаление" onClick={() => router.push("/mes/codes")} className={cn(!active && "col-span-2 xl:col-span-1")}>
-          Ручной режим
+    <aside className="order-2 grid grid-cols-2 gap-3 xl:order-none xl:flex xl:flex-col">
+      {!active ? (
+        <Btn size="xl" variant="primary" icon={Play} onClick={() => openLaunch()}>
+          Начать партию
         </Btn>
-        {active && (
-          <Btn size="lg" variant="danger" icon={Flag} onClick={openFinish}>
+      ) : (
+        <Btn size="xl" variant={awaiting ? "warning" : "secondary"} icon={ScanBarcode} onClick={onConfirmPallet} disabled={!awaiting} sub={awaiting ? "отсканируйте SSCC" : `при ${pallet?.size} из ${pallet?.size}`}>
+          Подтвердить палету
+        </Btn>
+      )}
+      <Btn size="lg" icon={ScanLine} onClick={() => router.push("/mes/codes")} sub="проверить · добавить · удалить">
+        Работа с кодами
+      </Btn>
+      {active && (
+        <Btn size="lg" icon={MoreHorizontal} onClick={openMore} sub="неполная палета, детали партии">
+          Другие операции
+        </Btn>
+      )}
+      {active && (
+        <div className="xl:mt-auto xl:border-t-2 xl:border-dashed xl:border-mes-line-strong xl:pt-4">
+          <Btn size="lg" variant="danger" icon={Flag} onClick={openFinish} block>
             Завершить партию
           </Btn>
-        )}
-      </div>
-
-      <Card
-        title="События"
-        icon={ScrollText}
-        className="hidden xl:flex"
-        bodyClassName="py-1 px-4"
-        actions={
-          <Link href="/mes/events" className="flex h-11 items-center gap-1 rounded-xl px-3 text-[14px] font-semibold text-mes-olive-deep hover:bg-mes-olive-soft">
-            Весь журнал <ChevronRight className="size-4" />
-          </Link>
-        }
-      >
-        <div className="divide-y divide-mes-line">
-          {state.events.slice(0, 6).map((e) => (
-            <EventRow key={e.id} e={e} compact />
-          ))}
         </div>
-      </Card>
+      )}
     </aside>
   )
 }
