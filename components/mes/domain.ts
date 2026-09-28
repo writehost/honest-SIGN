@@ -273,11 +273,14 @@ export interface CodeCheck {
   text: string
 }
 
+/** Результат проверки кода словами оператора */
+export type Verdict = "Код найден" | "Не зарегистрирован" | "Уже агрегирован" | "Удалён" | "Чужая номенклатура" | "Другая партия" | "Неверный код"
+
 export interface CodeEvaluation {
   raw: string
   key?: string
   /** Крупное слово результата */
-  verdict: "НАНЕСЁН" | "НЕ НАЙДЕН" | "УДАЛЁН" | "АГРЕГИРОВАН" | "НЕВЕРНЫЙ КОД"
+  verdict: Verdict
   tone: Tone
   record?: CodeRecord
   batch?: Batch
@@ -300,7 +303,7 @@ export function evaluateCode(s: MesState, raw: string): CodeEvaluation {
   if (!parsed) {
     return {
       ...base,
-      verdict: "НЕВЕРНЫЙ КОД",
+      verdict: "Неверный код",
       tone: "critical",
       details: isDataMatrixLike(raw) ? "Код обрезан или считан не полностью. Отсканируйте ещё раз." : "Это не код маркировки «Честного знака». Сканируйте DataMatrix на крышке бутыли.",
       checks: [{ label: "Формат", ok: false, text: "не DataMatrix ЧЗ" }],
@@ -343,24 +346,28 @@ export function evaluateCode(s: MesState, raw: string): CodeEvaluation {
   const common = { ...base, key: parsed.key, record: rec, batch, inActiveBatch, checks, canAdd, addBlockedReason, canRemove, removeBlockedReason }
 
   if (!rec) {
-    return { ...common, verdict: "НЕ НАЙДЕН", tone: "warning", details: gtinOk ? "Код не зарегистрирован камерой. Если бутыль на линии — его можно добавить." : active ? "Код не зарегистрирован и относится к другой номенклатуре." : "Код не зарегистрирован ни в одной партии." }
+    if (active && !gtinOk) return { ...common, verdict: "Чужая номенклатура", tone: "critical", details: `Бутыль не относится к партии: код другого продукта. Снимите её с линии.` }
+    return { ...common, verdict: "Не зарегистрирован", tone: "warning", details: active ? "Камера этот код не регистрировала. Если бутыль на линии — добавьте её в партию." : "Код не зарегистрирован ни в одной партии." }
   }
-  const src = rec.source === "camera" ? "камера" : "вручную"
+  if (rec.status === "removed" && !inActiveBatch) {
+    return { ...common, verdict: "Другая партия", tone: "warning", details: `Код из партии № ${batch?.number}, удалён из учёта.` }
+  }
   if (rec.status === "removed") {
-    return { ...common, verdict: "УДАЛЁН", tone: "critical", details: `Партия № ${batch?.number}. Удалён ${fmtTime(rec.removedAt ?? rec.at)}: ${rec.removeReason ?? "—"}.` }
+    return { ...common, verdict: "Удалён", tone: "critical", details: `Исключён из партии: ${rec.removeReason ?? "причина не указана"}.` }
   }
   if (rec.status === "aggregated") {
     const pallet = rec.palletCode ? s.pallets[rec.palletCode] : undefined
-    return { ...common, pallet, verdict: "АГРЕГИРОВАН", tone: "success", details: `Палета № ${rec.palletNo} · SSCC ${rec.palletCode ? formatSscc(rec.palletCode) : "—"} · партия № ${batch?.number}` }
+    if (!inActiveBatch) return { ...common, pallet, verdict: "Другая партия", tone: "warning", details: `Код из партии № ${batch?.number}, палета № ${rec.palletNo}.` }
+    return { ...common, pallet, verdict: "Уже агрегирован", tone: "info", details: `Бутыль в закрытой палете № ${rec.palletNo}.` }
   }
   // queued
   if (!inActiveBatch) {
-    return { ...common, verdict: "НАНЕСЁН", tone: "success", details: `Партия № ${batch?.number} (закрыта), в палету не агрегирован. Считан ${fmtTime(rec.at)} (${src}).` }
+    return { ...common, verdict: "Другая партия", tone: "warning", details: `Код из партии № ${batch?.number}, в палету не агрегирован.` }
   }
   const idx = s.fifo.indexOf(rec.code)
   const size = active!.palletSize
   const queue = idx >= 0 ? { palletNo: s.palletNo + Math.floor(idx / size), position: (idx % size) + 1, size } : undefined
-  return { ...common, queue, verdict: "НАНЕСЁН", tone: "success", details: `Партия № ${active!.number}. Считан ${fmtTime(rec.at)} (${src}). ${queue ? `Ожидает агрегации: палета № ${queue.palletNo}, позиция ${queue.position} из ${size}.` : ""}` }
+  return { ...common, queue, verdict: "Код найден", tone: "success", details: queue ? `Учтён в партии, ожидает агрегации в палету № ${queue.palletNo}.` : "Учтён в партии." }
 }
 
 export interface SsccCheck {

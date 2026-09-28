@@ -95,14 +95,14 @@ let target
 step("проверка кода в FIFO: НАНЕСЁН, палета № 3, позиция", () => {
   target = s.fifo[10]
   const v = D.evaluateCode(s, target)
-  assert.equal(v.verdict, "НАНЕСЁН"); assert.equal(v.queue.palletNo, 3); assert.equal(v.queue.position, 11); assert.equal(v.canRemove, true)
+  assert.equal(v.verdict, "Код найден"); assert.equal(v.queue.palletNo, 3); assert.equal(v.queue.position, 11); assert.equal(v.canRemove, true)
 })
 step("удаление с причиной: всего −1, FIFO −1, нанесено без изменений, ожидание SSCC снято", () => {
   const applied = b().applied, tot = total()
   act({ type: "MANUAL_REMOVE", raw: target, reason: "Бутыль снята с линии (брак)" })
   assert.equal(b().applied, applied); assert.equal(total(), tot - 1); assert.equal(b().removed, 1)
   assert.equal(pv().inPallet, 47); assert.equal(pv().awaiting, false)
-  assert.equal(D.evaluateCode(s, target).verdict, "УДАЛЁН")
+  assert.equal(D.evaluateCode(s, target).verdict, "Удалён")
 })
 step("повторное удаление того же кода — отказ, счётчики не меняются", () => {
   const tot = total()
@@ -113,7 +113,7 @@ step("повторное удаление того же кода — отказ,
 step("код в закрытой палете: АГРЕГИРОВАН + SSCC, удаление запрещено", () => {
   const agg = Object.values(s.codes).find((c) => c.palletCode === sscc1).code
   const v = D.evaluateCode(s, agg)
-  assert.equal(v.verdict, "АГРЕГИРОВАН"); assert.equal(v.canRemove, false); assert.match(v.removeBlockedReason, /корректировку агрегации/)
+  assert.equal(v.verdict, "Уже агрегирован"); assert.equal(v.canRemove, false); assert.match(v.removeBlockedReason, /корректировку агрегации/)
   const tot = total()
   act({ type: "MANUAL_REMOVE", raw: agg, reason: "Другое" })
   assert.equal(total(), tot); assert.equal(s.codes[agg].status, "aggregated")
@@ -121,7 +121,7 @@ step("код в закрытой палете: АГРЕГИРОВАН + SSCC, у
 step("добавление: неизвестный код своей номенклатуры → в конец FIFO, всего +1, палета снова собрана", () => {
   const code = D.makeDataMatrix(b().gtin)
   const v = D.evaluateCode(s, code)
-  assert.equal(v.verdict, "НЕ НАЙДЕН"); assert.equal(v.canAdd, true); assert.ok(v.checks.every((c) => c.ok))
+  assert.equal(v.verdict, "Не зарегистрирован"); assert.equal(v.canAdd, true); assert.ok(v.checks.every((c) => c.ok))
   const applied = b().applied, tot = total()
   act({ type: "MANUAL_ADD", raw: code })
   assert.equal(b().applied, applied); assert.equal(b().manualAdded, 1); assert.equal(total(), tot + 1); assert.equal(s.fifo.at(-1), D.parseDataMatrix(code).key)
@@ -130,7 +130,8 @@ step("добавление: неизвестный код своей номен�
 step("добавление дубликата, чужого GTIN, кода другой партии и мусора запрещено", () => {
   assert.equal(D.evaluateCode(s, s.fifo[0]).canAdd, false)
   assert.equal(D.evaluateCode(s, D.makeDataMatrix("04607123450118")).addBlockedReason, "Код другой номенклатуры")
-  assert.equal(D.evaluateCode(s, "4607123450019").verdict, "НЕВЕРНЫЙ КОД")
+  assert.equal(D.evaluateCode(s, D.makeDataMatrix("04607123450118")).verdict, "Чужая номенклатура")
+  assert.equal(D.evaluateCode(s, "4607123450019").verdict, "Неверный код")
   const tot = total()
   act({ type: "MANUAL_ADD", raw: s.fifo[0] })
   assert.equal(total(), tot)

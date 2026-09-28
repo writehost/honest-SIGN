@@ -6,7 +6,6 @@ import { CheckCircle2, Flag, Layers, ListChecks, PackageOpen, Play, ScrollText, 
 import { cn } from "@/lib/utils"
 import { batchTotal, fmtDate, fmtNum, useMes, type PalletSize, type Volume } from "./store"
 import { Btn, Chip, ConfirmDialog, Modal, Segmented, TextInput, VolumeBadge } from "./ui"
-import { useMesUi } from "./ui-context"
 
 /* ════════════════════════════════════════════════════════════════════════════
  * Запуск партии: номенклатура → размер палеты → «Начать партию»
@@ -14,7 +13,6 @@ import { useMesUi } from "./ui-context"
 
 export function LaunchBatchModal({ open, onClose, preselect }: { open: boolean; onClose: () => void; preselect?: string }) {
   const { state, startBatch } = useMes()
-  const { toast } = useMesUi()
   const [query, setQuery] = useState("")
   const [volume, setVolume] = useState<Volume | "all">("all")
   const [selectedId, setSelectedId] = useState<string | undefined>(preselect)
@@ -47,8 +45,8 @@ export function LaunchBatchModal({ open, onClose, preselect }: { open: boolean; 
 
   const start = () => {
     if (!selected) return
-    const number = startBatch(selected.id, palletSize)
-    toast({ tone: "success", title: `Партия № ${number} начата`, text: `${selected.name} · ${selected.volume} л · палета ${palletSize}` })
+    // Результат виден сразу в шапке партии — отдельное уведомление не нужно
+    startBatch(selected.id, palletSize)
     onClose()
   }
 
@@ -143,13 +141,11 @@ export function LaunchBatchModal({ open, onClose, preselect }: { open: boolean; 
 
 export function FinishBatchModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { state, active, pallet, finishBatch, requestPartial } = useMes()
-  const { toast } = useMesUi()
   if (!active || !pallet) return null
   const left = state.fifo.length
 
   const finish = () => {
     finishBatch()
-    toast({ tone: left ? "warning" : "success", title: `Партия № ${active.number} завершена`, text: left ? `${left} бут. без агрегации отмечены в отчёте` : undefined })
     onClose()
   }
   const closePartialFirst = () => {

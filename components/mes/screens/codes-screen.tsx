@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Check, History, MinusCircle, PlusCircle, ScanLine, ScanSearch, Trash2, X } from "lucide-react"
+import { Check, ChevronDown, History, MinusCircle, PlusCircle, ScanLine, ScanSearch, Trash2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   REMOVE_REASONS,
@@ -224,46 +224,28 @@ function Result({
   const t = TONE[tone]
   const r = ev.record
 
-  const facts: [string, string][] = []
+  const [more, setMore] = useState(false)
+  const facts: [string, string][] = [["Код", ev.key ?? cur.raw]]
   if (r) {
     facts.push(["Партия", `№ ${ev.batch?.number ?? "—"}${ev.inActiveBatch ? " (текущая)" : ""}`])
-    if (r.status === "aggregated") facts.push(["Палета", `№ ${r.palletNo} · закрыта`], ["SSCC", r.palletCode ? formatSscc(r.palletCode) : "—"])
+    if (r.status === "aggregated") facts.push(["Палета", `№ ${r.palletNo} · закрыта`], ["SSCC палеты", r.palletCode ? formatSscc(r.palletCode) : "—"])
     if (r.status === "queued") facts.push(["Палета", ev.queue ? `№ ${ev.queue.palletNo} · позиция ${ev.queue.position} из ${ev.queue.size}` : "не агрегирован"])
     facts.push(["Зарегистрирован", `${fmtTime(r.at)} · ${r.source === "camera" ? "камера" : "вручную"}`])
     if (r.status === "removed") facts.push(["Удалён", `${fmtTime(r.removedAt ?? r.at)} · ${r.removeReason ?? "—"}`])
   }
+  const checks = cur.checks ?? ev.checks
+  const showChecks = cur.mode === "add" && cur.outcome === "add_blocked"
 
   return (
     <section className={cn("flex flex-col overflow-hidden rounded-2xl border-2 bg-mes-card", t.border)}>
-      <div className={cn("px-6 py-5", t.soft)}>
-        {headline && <p className={cn("mb-1 text-[20px] font-bold", t.text)}>{headline.text}</p>}
-        <p className={cn("text-[64px] font-black leading-none tracking-tight", TONE[ev.tone].text)}>{ev.verdict}</p>
-        <p className="mt-3 text-[18px] text-mes-ink-2">{sscc ? "Отсканирован палетный код SSCC. Подтверждение палеты выполняется на экране «Линия»." : ev.details}</p>
+      <div className={cn("px-7 py-6", t.soft)}>
+        {headline && <p className={cn("mb-2 text-[22px] font-bold", t.text)}>{headline.text}</p>}
+        <p className={cn("text-[76px] font-bold leading-none tracking-tight", TONE[ev.tone].text)}>{ev.verdict}</p>
+        <p className="mt-3 text-[20px] text-mes-ink-2">{sscc ? "Это палетный код SSCC. Подтверждение палеты — на экране «Пост маркировки»." : ev.details}</p>
       </div>
 
-      <div className="flex flex-col gap-5 px-6 py-5">
-        {facts.length > 0 && (
-          <dl className="grid grid-cols-2 gap-x-8 gap-y-3 lg:grid-cols-3">
-            {facts.map(([k, v]) => (
-              <div key={k}>
-                <dt className="text-[13px] font-semibold uppercase tracking-[0.04em] text-mes-ink-3">{k}</dt>
-                <dd className="mt-0.5 text-[18px] font-semibold text-mes-ink">{v}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-
-        {cur.mode === "add" && (
-          <ul className="grid gap-2 sm:grid-cols-2">
-            {(cur.checks ?? ev.checks).map((c) => (
-              <li key={c.label} className="flex items-center gap-3 rounded-xl bg-mes-panel px-4 py-3 ring-1 ring-mes-line">
-                {c.ok ? <Check className="size-6 shrink-0 text-mes-olive-strong" /> : <X className="size-6 shrink-0 text-mes-red" />}
-                <span className="text-[16px] font-semibold text-mes-ink">{c.label}</span>
-                <span className="ml-auto truncate text-[15px] text-mes-ink-2">{c.text}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+      <div className="flex flex-col gap-5 px-7 py-5">
+        {showChecks && <Checks checks={checks} />}
 
         {cur.mode === "remove" && cur.outcome !== "removed" && (
           ev.canRemove ? (
@@ -290,7 +272,7 @@ function Result({
           )
         )}
 
-        {cur.mode === "check" && (ev.canAdd || ev.canRemove || ev.record?.status === "aggregated") && (
+        {cur.mode === "check" && (ev.canAdd || ev.canRemove || (ev.record?.status === "aggregated" && ev.inActiveBatch)) && (
           <div className="flex flex-wrap items-center gap-3">
             {ev.canAdd && (
               <Btn size="lg" variant="primary" icon={PlusCircle} onClick={onAdd}>
@@ -302,11 +284,46 @@ function Result({
                 Удалить код…
               </Btn>
             )}
-            {ev.record?.status === "aggregated" && ev.inActiveBatch && <p className="text-[15px] text-mes-ink-3">{ev.removeBlockedReason}</p>}
+            {ev.record?.status === "aggregated" && ev.inActiveBatch && <p className="text-[16px] text-mes-ink-2">{ev.removeBlockedReason}</p>}
+          </div>
+        )}
+
+        {ev.verdict !== "Неверный код" && (
+          <div className="border-t border-mes-line pt-3">
+            <button type="button" onClick={() => setMore((v) => !v)} className="flex h-12 items-center gap-2 rounded-xl px-2 text-[16px] font-semibold text-mes-ink-2 hover:bg-mes-panel">
+              <ChevronDown className={cn("size-5 transition-transform", more && "rotate-180")} /> Подробности
+            </button>
+            {more && (
+              <div className="mt-2 flex flex-col gap-4">
+                <dl className="grid grid-cols-2 gap-x-8 gap-y-3 lg:grid-cols-3">
+                  {facts.map(([k, v]) => (
+                    <div key={k} className={k === "Код" ? "col-span-full" : undefined}>
+                      <dt className="text-[13px] font-semibold uppercase tracking-[0.04em] text-mes-ink-3">{k}</dt>
+                      <dd className={cn("mt-0.5 text-[17px] font-semibold text-mes-ink", k === "Код" && "break-all font-mono font-normal")}>{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {cur.mode === "add" && !showChecks && <Checks checks={checks} />}
+              </div>
+            )}
           </div>
         )}
       </div>
     </section>
+  )
+}
+
+function Checks({ checks }: { checks: CodeEvaluation["checks"] }) {
+  return (
+    <ul className="grid gap-2 sm:grid-cols-2">
+      {checks.map((c) => (
+        <li key={c.label} className="flex items-center gap-3 rounded-xl bg-mes-panel px-4 py-3 ring-1 ring-mes-line">
+          {c.ok ? <Check className="size-6 shrink-0 text-mes-olive-strong" /> : <X className="size-6 shrink-0 text-mes-red" />}
+          <span className="text-[16px] font-semibold text-mes-ink">{c.label}</span>
+          <span className="ml-auto truncate text-[15px] text-mes-ink-2">{c.text}</span>
+        </li>
+      ))}
+    </ul>
   )
 }
 
