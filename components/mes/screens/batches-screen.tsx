@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ChevronRight, Layers, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -24,7 +24,12 @@ export function BatchesScreen() {
   const router = useRouter()
   const [status, setStatus] = useState<StatusFilter>("all")
   const [volume, setVolume] = useState<Volume | "all">("all")
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(() => params.get("q") ?? "")
+  // Поиск из верхней строки приходит параметром ?q=
+  const qParam = params.get("q")
+  useEffect(() => {
+    if (qParam !== null) setQuery(qParam)
+  }, [qParam])
   const openId = params.get("batch")
   const setOpen = (id: string | null) => router.replace(id ? `/mes/batches?batch=${id}` : "/mes/batches")
 
@@ -69,7 +74,7 @@ export function BatchesScreen() {
           <span />
         </div>
         {list.length === 0 && <EmptyState icon={Layers} title="Партий не найдено" />}
-        <div className="divide-y divide-mes-line">
+        <div className="divide-y divide-mes-line/70">
           {list.map((b) => (
             <Row key={b.id} b={b} onOpen={() => setOpen(b.id)} />
           ))}
@@ -85,7 +90,7 @@ function Row({ b, onOpen }: { b: Batch; onOpen: () => void }) {
   const corr = b.manualAdded + b.removed
   const left = b.status === "active" ? null : b.unaggregated
   return (
-    <button type="button" onClick={onOpen} className={cn("grid w-full grid-cols-2 items-center gap-x-4 gap-y-2 px-5 py-4 text-left hover:bg-mes-panel xl:min-h-[72px] xl:py-2", XL_COLS, b.status === "active" && "bg-mes-olive-tint")}>
+    <button type="button" onClick={onOpen} className={cn("grid w-full grid-cols-2 items-center gap-x-4 gap-y-2 px-5 py-4 text-left even:bg-mes-panel hover:bg-mes-sand xl:min-h-[72px] xl:py-2", XL_COLS, b.status === "active" && "bg-mes-olive-tint even:bg-mes-olive-tint")}>
       <span>
         <span className="block text-[18px] font-bold tabular-nums text-mes-ink">№ {b.number}</span>
         <span className="block text-[14px] text-mes-ink-3">{fmtDateTime(b.startedAt)}</span>

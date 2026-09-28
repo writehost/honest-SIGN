@@ -154,14 +154,17 @@
 
 /* ─── SCADA System MES · дизайн-токены (светлая промышленная тема) ─── */
 @theme {
-  --color-mes-bg: #f2f3ee;
-  --color-mes-panel: #f8f9f5;
+  --color-mes-bg: #f5f4f0;
+  --color-mes-panel: #faf9f6;
+  --color-mes-sand: #f3eee1;
+  --color-mes-sand-strong: #e9e1cc;
+  --color-mes-forest: #1f3a2b;
   --color-mes-card: #ffffff;
-  --color-mes-line: #e2e5da;
-  --color-mes-line-strong: #cfd3c5;
-  --color-mes-ink: #23272e;
-  --color-mes-ink-2: #555c66;
-  --color-mes-ink-3: #8a9099;
+  --color-mes-line: #ebe8e1;
+  --color-mes-line-strong: #dad6cc;
+  --color-mes-ink: #1f2124;
+  --color-mes-ink-2: #5c5f66;
+  --color-mes-ink-3: #8d9097;
   --color-mes-olive: #8aa83b;
   --color-mes-olive-strong: #6b8726;
   --color-mes-olive-deep: #4f6519;
@@ -169,10 +172,10 @@
   --color-mes-olive-tint: #f6f9ec;
   --color-mes-amber: #e0890f;
   --color-mes-amber-strong: #b86d05;
-  --color-mes-amber-soft: #fdf1dc;
+  --color-mes-amber-soft: #fdf5e6;
   --color-mes-red: #d2412f;
   --color-mes-red-strong: #a8301f;
-  --color-mes-red-soft: #fbe6e2;
+  --color-mes-red-soft: #fbf0ee;
   --color-mes-blue: #3a78c2;
   --color-mes-blue-soft: #e6eff9;
 }

@@ -16,7 +16,7 @@ import {
   type ScanMode,
   type Tone,
 } from "../store"
-import { Btn, ConfirmDialog, EmptyState, Segmented, TONE, TextInput } from "../ui"
+import { Btn, ConfirmDialog, EmptyState, PageHeader, Segmented, TONE, TextInput } from "../ui"
 import { useMesUi, useScanHandler } from "../ui-context"
 
 const MODE: Record<ScanMode, { label: string; icon: typeof ScanSearch; hint: string }> = {
@@ -110,10 +110,7 @@ export function CodesScreen() {
   return (
     <div className="grid gap-5 xl:h-full xl:grid-cols-[minmax(0,1fr)_420px]">
       <div className="flex min-w-0 flex-col gap-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-[26px] font-bold text-mes-ink">Работа с кодами</h1>
-          <p className="text-[16px] text-mes-ink-2">{active ? `Партия № ${active.number} · ${active.nomenclatureName} · ${active.volume} л` : "Партия не запущена — доступна только проверка"}</p>
-        </div>
+        <PageHeader title="Работа с кодами" subtitle={active ? `Партия № ${active.number} · ${active.nomenclatureName} · ${active.volume} л` : "Партия не запущена — доступна только проверка"} />
 
         <Segmented
           size="lg"

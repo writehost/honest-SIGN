@@ -17,21 +17,29 @@ import {
   WifiOff,
   X,
   XCircle,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  UserRound,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { MesProvider, cameraSilenceMs, isCameraOnline, uid, useMes, useNow } from "./store"
+import { MesProvider, cameraSilenceMs, isCameraOnline, parseDataMatrix, uid, useMes, useNow } from "./store"
 import { FinishBatchModal, LaunchBatchModal, MoreOperationsModal } from "./modals"
 import { Btn, Drawer, Segmented, TONE, ToggleRow } from "./ui"
 import { MesUiContext, useMesUi, type MesUi, type ScanHandler, type Toast } from "./ui-context"
 
-const NAV: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/mes", label: "Пост маркировки", icon: Factory },
-  { href: "/mes/codes", label: "Коды", icon: ScanLine },
-  { href: "/mes/batches", label: "Партии", icon: Layers },
-  { href: "/mes/nomenclature", label: "Номенклатура", icon: Boxes },
-  { href: "/mes/events", label: "Журнал", icon: ScrollText },
-  { href: "/mes/settings", label: "Настройки", icon: Settings },
+const NAV_GROUPS: { title: string; items: { href: string; label: string; icon: LucideIcon }[] }[] = [
+  { title: "Главное", items: [{ href: "/mes", label: "Пост маркировки", icon: Factory }] },
+  {
+    title: "Маркировка",
+    items: [
+      { href: "/mes/codes", label: "Работа с кодами", icon: ScanLine },
+      { href: "/mes/batches", label: "Партии", icon: Layers },
+    ],
+  },
+  { title: "Справочники", items: [{ href: "/mes/nomenclature", label: "Номенклатура", icon: Boxes }] },
+  { title: "Контроль", items: [{ href: "/mes/events", label: "Журнал событий", icon: ScrollText }] },
 ]
 
 export function MesShell({ children }: { children: ReactNode }) {
@@ -120,9 +128,14 @@ function ShellInner({ children }: { children: ReactNode }) {
   return (
     <MesUiContext.Provider value={ui}>
       <div className={cn("mes-root flex h-dvh flex-col bg-mes-bg text-mes-ink", state.settings.largeText && "mes-large")}>
-        <AppBar pathname={pathname} onSim={() => setSimOpen(true)} />
-        <CameraOffline />
-        <main className="min-h-0 flex-1 overflow-y-auto p-5">{children}</main>
+        <div className="flex min-h-0 flex-1">
+          <Sidebar pathname={pathname} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <TopBar onSim={() => setSimOpen(true)} />
+            <CameraOffline />
+            <main className="min-h-0 flex-1 overflow-y-auto px-6 pb-5 pt-4">{children}</main>
+          </div>
+        </div>
 
         <Toasts toasts={toasts} onClose={(id) => setToasts((xs) => xs.filter((x) => x.id !== id))} />
         <LaunchBatchModal open={launch.open} preselect={launch.preselect} onClose={() => setLaunch({ open: false })} />
@@ -134,50 +147,166 @@ function ShellInner({ children }: { children: ReactNode }) {
   )
 }
 
-/* ─── Шапка: бренд, небольшая навигация, режим симуляции ─── */
+/* ─── Навигация в стиле SCADA System WMS: группы разделов, бежевая подсветка активного ─── */
 
 const isActive = (pathname: string, href: string) => (href === "/mes" ? pathname === "/mes" : pathname.startsWith(href))
 
-function AppBar({ pathname, onSim }: { pathname: string; onSim: () => void }) {
-  const { state } = useMes()
-  const alerts = state.alerts.length
+function Logo({ compact }: { compact?: boolean }) {
   return (
-    <header className="flex h-16 shrink-0 items-center gap-4 border-b border-mes-line bg-mes-card px-5">
-      <Link href="/mes" className="flex shrink-0 items-center gap-3">
-        <span className="flex size-10 items-center justify-center rounded-lg bg-mes-olive-strong text-[13px] font-black text-white">MES</span>
-        <span className="hidden whitespace-nowrap text-[17px] font-bold text-mes-ink 2xl:block">SCADA System MES</span>
-      </Link>
-      <nav className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const on = isActive(pathname, href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "relative flex h-12 shrink-0 items-center gap-2 rounded-xl px-4 text-[16px] font-semibold",
-                on ? "bg-mes-olive-soft text-mes-olive-deep" : "text-mes-ink-2 hover:bg-mes-panel",
-              )}
-            >
-              <Icon className={cn("size-5", on ? "text-mes-olive-strong" : "text-mes-ink-3")} />
-              {label}
-              {href === "/mes" && alerts > 0 && !on && <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-mes-amber px-1.5 text-[13px] font-bold text-white">{alerts}</span>}
-            </Link>
-          )
-        })}
-      </nav>
-      <button
-        type="button"
-        onClick={onSim}
-        className="flex h-11 shrink-0 items-center gap-2 rounded-xl border-2 border-dashed border-mes-amber/60 bg-mes-amber-soft px-3.5 text-[14px] font-bold text-mes-amber-strong"
-        title="Прототип работает на симуляции камеры и сканера"
+    <span className="flex items-center gap-2.5">
+      <svg viewBox="0 0 40 40" className="size-10 shrink-0" aria-hidden>
+        <path d="M31 9.5C28.4 7 24.8 5.5 20.6 5.5 13.9 5.5 9 9.3 9 14.6c0 11.2 21.5 6.6 21.5 15.1 0 3.3-3.3 5.3-8 5.3-4.3 0-7.8-1.6-10.4-4.2" fill="none" stroke="#1f2124" strokeWidth="6" strokeLinecap="round" />
+        <path d="M31 9.5C28.4 7 24.8 5.5 20.6 5.5" fill="none" stroke="#8cbf3f" strokeWidth="6" strokeLinecap="round" />
+        <path d="M12.1 30.8c2.6 2.6 6.1 4.2 10.4 4.2" fill="none" stroke="#8cbf3f" strokeWidth="6" strokeLinecap="round" />
+      </svg>
+      {!compact && (
+        <span className="leading-none">
+          <span className="block whitespace-nowrap text-[18px] font-extrabold tracking-tight text-mes-ink">
+            SCADA <span className="font-medium">System</span>
+          </span>
+          <span className="mt-1 flex items-center gap-1.5 text-[10px] font-bold tracking-[0.3em] text-mes-ink-2">
+            <span className="h-px w-6 bg-mes-ink-3" />
+            MES
+            <span className="h-px w-6 bg-mes-ink-3" />
+          </span>
+        </span>
+      )}
+    </span>
+  )
+}
+
+function Sidebar({ pathname }: { pathname: string }) {
+  // На узких экранах меню по умолчанию свёрнуто до иконок
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth < 1400)
+  const item = (href: string, label: string, Icon: LucideIcon) => {
+    const on = isActive(pathname, href)
+    return (
+      <Link
+        key={href}
+        href={href}
+        title={collapsed ? label : undefined}
+        className={cn(
+          "flex h-12 items-center gap-3 rounded-xl text-[16px]",
+          collapsed ? "justify-center px-0" : "px-3.5",
+          on ? "bg-mes-sand font-semibold text-mes-ink" : "text-mes-ink-2 hover:bg-mes-panel",
+        )}
       >
-        <FlaskConical className="size-5" /> Симуляция
-      </button>
-      <span className="hidden shrink-0 text-right leading-tight xl:block">
-        <span className="block text-[12px] text-mes-ink-3">Оператор</span>
-        <span className="block text-[15px] font-semibold text-mes-ink">{state.settings.operator}</span>
-      </span>
+        <Icon className={cn("size-5 shrink-0", on ? "text-mes-olive-strong" : "text-mes-ink-3")} />
+        {!collapsed && <span className="flex-1 truncate">{label}</span>}
+      </Link>
+    )
+  }
+  return (
+    <aside className={cn("hidden shrink-0 flex-col border-r border-mes-line bg-mes-card lg:flex", collapsed ? "w-[84px]" : "w-[264px]")}>
+      <div className={cn("flex h-[72px] shrink-0 items-center", collapsed ? "justify-center" : "justify-between pl-5 pr-3")}>
+        <Link href="/mes">
+          <Logo compact={collapsed} />
+        </Link>
+        {!collapsed && (
+          <button type="button" onClick={() => setCollapsed(true)} aria-label="Свернуть меню" className="flex size-10 items-center justify-center rounded-lg text-mes-ink-3 hover:bg-mes-panel">
+            <ChevronLeft className="size-5" />
+          </button>
+        )}
+      </div>
+      {collapsed && (
+        <button type="button" onClick={() => setCollapsed(false)} aria-label="Развернуть меню" className="mx-auto mb-2 flex size-10 items-center justify-center rounded-lg text-mes-ink-3 hover:bg-mes-panel">
+          <ChevronRight className="size-5" />
+        </button>
+      )}
+      <nav className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 pb-3">
+        {NAV_GROUPS.map((g) => (
+          <div key={g.title} className="flex flex-col gap-0.5">
+            {!collapsed && <p className="px-3.5 pb-1 pt-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-mes-ink-3">{g.title}</p>}
+            {g.items.map((i) => item(i.href, i.label, i.icon))}
+          </div>
+        ))}
+      </nav>
+      <div className="border-t border-mes-line p-3">{item("/mes/settings", "Настройки", Settings)}</div>
+    </aside>
+  )
+}
+
+/* ─── Верхняя строка: поиск кода/партии, симуляция, оператор ─── */
+
+function TopBar({ onSim }: { onSim: () => void }) {
+  const { state } = useMes()
+  const { inspectCode } = useMesUi()
+  const router = useRouter()
+  const pathname = usePathname()
+  const [q, setQ] = useState("")
+  const ref = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault()
+        ref.current?.focus()
+      }
+    }
+    window.addEventListener("keydown", h)
+    return () => window.removeEventListener("keydown", h)
+  }, [])
+
+  const submit = () => {
+    const v = q.trim()
+    if (!v) return
+    setQ("")
+    ref.current?.blur()
+    // DataMatrix → проверка кода; всё остальное — поиск по партиям (номер, продукт)
+    if (parseDataMatrix(v)) inspectCode(v)
+    else router.push(`/mes/batches?q=${encodeURIComponent(v)}`)
+  }
+
+  return (
+    <header className="flex h-[72px] shrink-0 items-center gap-4 border-b border-mes-line bg-mes-card px-6">
+      <Link href="/mes" className="lg:hidden">
+        <Logo compact />
+      </Link>
+      <form
+        className="relative w-full max-w-[440px]"
+        onSubmit={(e) => {
+          e.preventDefault()
+          submit()
+        }}
+      >
+        <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-mes-ink-3" />
+        <input
+          ref={ref}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Поиск кода или партии"
+          className="h-12 w-full rounded-full border border-mes-line bg-mes-panel pl-12 pr-20 text-[16px] text-mes-ink outline-none placeholder:text-mes-ink-3 focus:border-mes-olive focus:bg-mes-card focus:ring-4 focus:ring-mes-olive/15"
+        />
+        <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-mes-line bg-mes-card px-2 py-0.5 text-[12px] text-mes-ink-3">Ctrl K</kbd>
+      </form>
+      {pathname !== "/mes" && (
+        <nav className="flex gap-1 lg:hidden">
+          {[...NAV_GROUPS.flatMap((g) => g.items), { href: "/mes/settings", label: "Настройки", icon: Settings }].map(({ href, icon: Icon, label }) => (
+            <Link key={href} href={href} aria-label={label} className="flex size-12 items-center justify-center rounded-full text-mes-ink-2 hover:bg-mes-panel">
+              <Icon className="size-5" />
+            </Link>
+          ))}
+        </nav>
+      )}
+      <div className="ml-auto flex items-center gap-4">
+        <button
+          type="button"
+          onClick={onSim}
+          className="flex h-12 items-center gap-2 rounded-full border border-dashed border-mes-amber/70 bg-mes-amber-soft px-4 text-[15px] font-semibold text-mes-amber-strong"
+          title="Прототип работает на симуляции камеры и ручного сканера"
+        >
+          <FlaskConical className="size-5" /> Симуляция
+        </button>
+        <span className="flex items-center gap-3">
+          <span className="flex size-12 items-center justify-center rounded-full bg-mes-forest text-white">
+            <UserRound className="size-6" />
+          </span>
+          <span className="hidden whitespace-nowrap leading-tight xl:block">
+            <span className="block text-[16px] font-semibold text-mes-ink">{state.settings.operator}</span>
+            <span className="block text-[13px] text-mes-ink-3">Оператор · {state.settings.lineName}</span>
+          </span>
+        </span>
+      </div>
     </header>
   )
 }
@@ -189,7 +318,7 @@ function CameraOffline() {
   const now = useNow()
   if (isCameraOnline(state, now)) return null
   return (
-    <div className="flex shrink-0 items-center gap-4 bg-mes-red px-5 py-3 text-white">
+    <div className="flex shrink-0 items-center gap-4 bg-mes-red px-6 py-3 text-white">
       <WifiOff className="size-7 shrink-0" />
       <p className="text-[19px] font-bold">Нет связи с камерой — {Math.floor(cameraSilenceMs(state, now) / 1000)} с</p>
       <p className="text-[16px] opacity-95">

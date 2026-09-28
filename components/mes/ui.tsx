@@ -20,6 +20,7 @@ export const TONE: Record<Tone, { soft: string; text: string; border: string; so
 export function Card({
   title,
   icon: Icon,
+  count,
   actions,
   className,
   bodyClassName,
@@ -27,18 +28,20 @@ export function Card({
 }: {
   title?: ReactNode
   icon?: LucideIcon
+  count?: number
   actions?: ReactNode
   className?: string
   bodyClassName?: string
   children: ReactNode
 }) {
   return (
-    <section className={cn("flex flex-col rounded-2xl border border-mes-line bg-mes-card shadow-[0_1px_2px_rgb(35_39_46/0.04)]", className)}>
+    <section className={cn("flex flex-col rounded-2xl border border-mes-line bg-mes-card", className)}>
       {(title || actions) && (
         <header className="flex min-h-14 items-center justify-between gap-3 border-b border-mes-line px-5">
-          <h2 className="flex items-center gap-2.5 text-[15px] font-semibold uppercase tracking-[0.04em] text-mes-ink-2">
-            {Icon && <Icon className="size-5 text-mes-olive-strong" strokeWidth={2.2} />}
+          <h2 className="flex items-center gap-2.5 text-[18px] font-bold text-mes-ink">
+            {Icon && <Icon className="size-5 text-mes-ink-3" strokeWidth={2} />}
             {title}
+            {count !== undefined && <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-mes-sand px-2 text-[14px] font-semibold text-mes-ink-2">{count}</span>}
           </h2>
           {actions}
         </header>
@@ -404,14 +407,13 @@ export function EmptyState({ icon: Icon, title, text, action }: { icon: LucideIc
   )
 }
 
+/** Шапка страницы в стиле SCADA System WMS: белая полоса, название и серые пояснения */
 export function PageHeader({ title, subtitle, actions }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h1 className="text-[30px] font-bold leading-tight tracking-tight text-mes-ink">{title}</h1>
-        {subtitle && <p className="mt-1 text-[16px] text-mes-ink-2">{subtitle}</p>}
-      </div>
-      {actions && <div className="flex flex-wrap gap-3">{actions}</div>}
+    <div className="flex min-h-16 flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-mes-line bg-mes-card px-5 py-2.5">
+      <h1 className="text-[20px] font-bold text-mes-ink">{title}</h1>
+      {subtitle && <p className="text-[15px] text-mes-ink-2">{subtitle}</p>}
+      {actions && <div className="ml-auto flex flex-wrap gap-3">{actions}</div>}
     </div>
   )
 }
@@ -423,12 +425,12 @@ export function Chip({ on, onClick, children, count }: { on: boolean; onClick: (
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex h-12 items-center gap-2 rounded-xl border px-4 text-[16px] font-semibold transition-colors",
-        on ? "border-mes-olive bg-mes-olive-soft text-mes-olive-deep" : "border-mes-line-strong bg-mes-card text-mes-ink-2 hover:bg-mes-panel",
+        "inline-flex h-12 items-center gap-2 rounded-xl border px-4 text-[16px] font-medium transition-colors",
+        on ? "border-mes-sand-strong bg-mes-sand text-mes-ink" : "border-transparent bg-transparent text-mes-ink-2 hover:bg-mes-card",
       )}
     >
       {children}
-      {count !== undefined && <span className={cn("rounded-md px-1.5 text-[13px] tabular-nums", on ? "bg-mes-olive-strong text-white" : "bg-mes-panel text-mes-ink-3")}>{count}</span>}
+      {count !== undefined && <span className="rounded-md bg-mes-card px-1.5 text-[13px] tabular-nums text-mes-ink-3 ring-1 ring-mes-line">{count}</span>}
     </button>
   )
 }

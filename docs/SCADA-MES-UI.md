@@ -9,7 +9,7 @@ npm run build && npm start            # затем в другом термин�
 npm run test:mes:e2e                  # три сценария оператора в браузере (Playwright)
 ```
 
-![Главный экран](mes/v3-01-line.png)
+![Главный экран](mes/v4-01-line.png)
 
 ## Модель производства
 
@@ -70,9 +70,9 @@ SSCC прошёл проверку ──► первые N кодов связ�
 
 | Палета собрана — ждём SSCC | Корректировка: удаление кода |
 |---|---|
-| ![SSCC](mes/v3-05-await-sscc.png) | ![Удаление](mes/v3-07-remove-reason.png) |
+| ![SSCC](mes/v4-05-await-sscc.png) | ![Удаление](mes/v4-07-remove-reason.png) |
 | **Нет связи с камерой** | **События камеры** |
-| ![Камера](mes/v3-10-camera-offline.png) | ![NoRead](mes/v3-04-camera-alerts.png) |
+| ![Камера](mes/v4-10-camera-offline.png) | ![NoRead](mes/v4-04-camera-alerts.png) |
 
 ## Код
 
