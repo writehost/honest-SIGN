@@ -44,28 +44,28 @@ export function Journal() {
         <Select value={userId} onChange={(e) => setUserId(e.target.value)} className="w-[200px]">
           <option value="">Все сотрудники</option>{s.users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
         </Select>
-        <span className="text-[13px] text-ink-3 ml-2">{rows.length} записей</span>
+        <span className="text-[13px] text-muted-foreground/80 ml-2">{rows.length} записей</span>
       </div>
-      <div className="bg-surface border border-line rounded-xl overflow-hidden">
-        <table className="dtable">
+      <div className="wms-panel">
+        <table className="wms-ag-grid wms-ag-grid--fit">
           <thead><tr><th>Время</th><th>Сотрудник</th><th>Операция</th><th>SKU</th><th>Товар</th><th className="text-right">Кол-во</th><th>Откуда → Куда</th><th>Документ</th></tr></thead>
           <tbody>
             {rows.slice(0, 500).map(({ m, d }) => (
-              <tr key={m.id}>
-                <td className="tnum whitespace-nowrap"><span className="text-ink-3">{fmtDate(m.ts)}</span> {fmtTime(m.ts)}</td>
+              <tr key={m.id} className="wms-ag-row">
+                <td className="tnum whitespace-nowrap"><span className="text-muted-foreground/80">{fmtDate(m.ts)}</span> {fmtTime(m.ts)}</td>
                 <td>{d.user?.name}</td>
                 <td>{MOVEMENT_LABEL[m.type]}</td>
                 <td className="font-mono text-[12px]">{d.product?.sku}</td>
-                <td className="text-ink-2 max-w-[280px] truncate">{d.product?.name}</td>
+                <td className="text-muted-foreground max-w-[280px] truncate">{d.product?.name}</td>
                 <td className="text-right tnum font-semibold">{d.sign}{m.qty}</td>
                 <td>
                   <span className="inline-flex items-center gap-1.5">
-                    {d.from ? <LocMini code={d.from} box={d.fromType === 'container'} /> : <span className="text-ink-3 text-[12px]">{m.type === 'receipt' ? 'поставка' : '—'}</span>}
-                    <ArrowRight size={12} className="text-ink-3" />
-                    {d.to ? <LocMini code={d.to} box={d.toType === 'container'} /> : <span className="text-ink-3 text-[12px]">{m.type === 'ship' ? 'покупателю' : m.type === 'pack' ? 'упаковано' : 'списано'}</span>}
+                    {d.from ? <LocMini code={d.from} box={d.fromType === 'container'} /> : <span className="text-muted-foreground/80 text-[12px]">{m.type === 'receipt' ? 'поставка' : '—'}</span>}
+                    <ArrowRight size={12} className="text-muted-foreground/80" />
+                    {d.to ? <LocMini code={d.to} box={d.toType === 'container'} /> : <span className="text-muted-foreground/80 text-[12px]">{m.type === 'ship' ? 'покупателю' : m.type === 'pack' ? 'упаковано' : 'списано'}</span>}
                   </span>
                 </td>
-                <td className="text-ink-2">{d.doc}</td>
+                <td className="text-muted-foreground">{d.doc}</td>
               </tr>
             ))}
           </tbody>

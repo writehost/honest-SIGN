@@ -116,7 +116,7 @@ await owner.getByTestId('oi-product-0').selectOption({ label: 'Футболка 
 await owner.getByTestId('oi-qty-0').fill('2')
 await owner.getByTestId('order-save').click()
 await owner.getByText('Заказ создан и передан в сборку').waitFor()
-const orderNo = (await owner.locator('table.dtable tbody tr td:nth-child(2)').first().innerText()).trim()
+const orderNo = (await owner.locator('table.wms-ag-grid tbody tr td:nth-child(2)').first().innerText()).trim()
 await shot(owner, '05-desktop-orders')
 step(7, `Создан заказ №${orderNo} на 2 шт., зарезервирован`)
 
@@ -185,10 +185,10 @@ step(12, 'Упаковщик повторно проверил: лишний т�
 
 // 13. status «Упакован» in the cabinet + journal
 await owner.goto(`${BASE}/app/orders`)
-const row = owner.locator('table.dtable tbody tr', { hasText: orderNo })
+const row = owner.locator('table.wms-ag-grid tbody tr', { hasText: orderNo })
 assert.match(await row.innerText(), /Упакован/)
 await owner.goto(`${BASE}/app/journal`)
-const journal = await owner.locator('table.dtable').innerText()
+const journal = await owner.locator('table.wms-ag-grid').innerText()
 for (const t of ['Приёмка', 'Сборка', 'Упаковка', 'Иван Петров']) assert.ok(journal.includes(t), `journal has ${t}`)
 await shot(owner, '13-desktop-journal')
 step(13, `Заказ №${orderNo} — «Упакован»; журнал: кто/что/откуда/куда`)

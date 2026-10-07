@@ -10,7 +10,7 @@ import { usePersistentState } from '@/lib/persist'
 import { ScanPad } from '@/scan/ScanPad'
 import { flashOk, showError } from '@/scan/signals'
 import { BoxTag, CellTag, ProductThumb } from '@/ui/kit'
-import { BigButton, OpHeader, Section, StickyAction } from './common'
+import { BigButton, DoneScreen, OpHeader, Section, StickyAction } from './common'
 import { barcodeOf, cellCodes, productCodes } from './demo'
 import { cx, fmtWhen, plural } from '@/lib/format'
 import type { Order, Product } from '@/domain/types'
@@ -44,7 +44,7 @@ export function MobilePickList() {
         )}
         <Section title={`К сборке · ${queue.length}`}>
           {queue.length === 0 ? (
-            <div className="bg-surface border border-line rounded-xl px-4 py-8 text-center text-ink-2">Все заказы собраны. Отличная работа.</div>
+            <div className="wms-panel px-4 py-8 text-center text-muted-foreground">Все заказы собраны. Отличная работа.</div>
           ) : (
             <div className="grid gap-2">{queue.map((o) => <OrderRow key={o.id} o={o} onClick={() => start(o)} />)}</div>
           )}
@@ -71,20 +71,20 @@ function OrderRow({ o, onClick, accent }: { o: Order; onClick?: () => void; acce
   const picked = items.reduce((a, i) => a + i.pickedQty, 0)
   const picker = s.users.find((u) => u.id === o.pickerId)
   return (
-    <button disabled={!onClick} onClick={onClick} className={cx('w-full text-left rounded-xl px-4 py-3.5 flex items-center gap-3', accent ? 'bg-night text-white' : 'bg-surface border border-line active:bg-sunken')}>
+    <button disabled={!onClick} onClick={onClick} className={cx('w-full text-left rounded-xl px-4 py-3.5 flex items-center gap-3', accent ? 'bg-card border border-primary shadow-[inset_4px_0_0_var(--primary)]' : 'bg-card border border-border/70 shadow-sm active:bg-accent/25')}>
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2">
           <span className="font-mono text-[19px] font-semibold">№{o.number}</span>
-          <span className={cx('text-[13px] truncate', accent ? 'text-white/60' : 'text-ink-3')}>{S.CHANNEL_LABEL[o.channel]}</span>
+          <span className={cx('text-[13px] truncate', 'text-muted-foreground')}>{S.CHANNEL_LABEL[o.channel]}</span>
         </div>
-        <div className={cx('text-[14px] mt-0.5', accent ? 'text-white/75' : 'text-ink-2')}>
+        <div className={cx('text-[14px] mt-0.5', 'text-muted-foreground')}>
           {items.length} {plural(items.length, 'позиция', 'позиции', 'позиций')} · {units} шт.
           {o.status === 'picking' && ` · взято ${picked}`}
           {picker && o.status === 'picking' && !accent && ` · ${picker.name}`}
           {o.status === 'to_pick' && ` · ${fmtWhen(o.createdAt)}`}
         </div>
       </div>
-      {onClick && <ChevronRight size={22} className={accent ? 'text-white/60' : 'text-ink-3'} />}
+      {onClick && <ChevronRight size={22} className={'text-muted-foreground'} />}
     </button>
   )
 }
@@ -145,7 +145,7 @@ export function MobilePickTask() {
               compact
               onScan={onBox}
               prompt="Возьмите пустой короб и сканируйте его QR"
-              target={<span className="text-[15px] text-ink-2">Всё, что вы возьмёте, будет привязано к этому коробу — заказы не смешаются.</span>}
+              target={<span className="text-[15px] text-muted-foreground">Всё, что вы возьмёте, будет привязано к этому коробу — заказы не смешаются.</span>}
               demo={free.slice(0, 4).map((c) => ({ code: c.code, label: 'Свободный короб', tone: 'ok' as const }))}
               demoEnabled={org.settings.demoScanner}
             />
@@ -216,32 +216,32 @@ export function MobilePickTask() {
         title={`Заказ №${order.number}`}
         step={`${lineNo}/${task.lines.length}`}
         onBack={() => nav('/m/pick')}
-        right={<span className="mr-2"><BoxTag code={box.code} className="!bg-white/10" /></span>}
+        right={<span className="mr-2"><BoxTag code={box.code} /></span>}
       />
       <Progress done={task.lines.filter((l) => l.pickedQty >= l.qty).length} total={task.lines.length} />
 
       <div className="px-4 pt-4">
-        <div className={cx('rounded-2xl border-2 p-4 transition-colors', atCell ? 'border-line bg-surface' : 'border-ink bg-surface')}>
+        <div className={cx('rounded-2xl border bg-card p-4 shadow-sm transition-all', atCell ? 'border-border/70' : 'border-primary ring-[3px] ring-primary/20')}>
           <div className="flex items-center justify-between">
-            <div className="text-[13px] font-semibold uppercase tracking-wide text-ink-3">Идите</div>
-            {atCell && <span className="inline-flex items-center gap-1 text-ok text-[13px] font-semibold"><CheckCircle2 size={16} /> На месте</span>}
+            <div className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground/80">Идите</div>
+            {atCell && <span className="inline-flex items-center gap-1 text-success text-[13px] font-semibold"><CheckCircle2 size={16} /> На месте</span>}
           </div>
           <div className="mt-2"><CellTag code={cell.code} size="xl" /></div>
         </div>
 
-        <div className={cx('mt-3 rounded-2xl border-2 p-4 bg-surface', atCell ? 'border-ink' : 'border-line')}>
+        <div className={cx('mt-3 rounded-2xl border bg-card p-4 shadow-sm transition-all', atCell ? 'border-primary ring-[3px] ring-primary/20' : 'border-border/70')}>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[13px] font-semibold uppercase tracking-wide text-ink-3">Возьмите</div>
+              <div className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground/80">Возьмите</div>
               <div className="mt-1 text-[52px] leading-none font-bold tnum" data-testid="take-qty">
-                {remaining}<span className="text-2xl font-medium text-ink-3 ml-2">{product.unit}</span>
+                {remaining}<span className="text-2xl font-medium text-muted-foreground/80 ml-2">{product.unit}</span>
               </div>
-              {line.pickedQty > 0 && <div className="text-[14px] text-ok font-medium mt-1">Взято {line.pickedQty} из {line.qty}</div>}
+              {line.pickedQty > 0 && <div className="text-[14px] text-success font-medium mt-1">Взято {line.pickedQty} из {line.qty}</div>}
             </div>
             <ProductThumb product={product} size={104} className="rounded-xl" />
           </div>
           <div className="mt-3 text-[19px] font-semibold leading-snug">{product.name}</div>
-          <div className="mt-1 flex flex-wrap gap-x-3 text-[14px] text-ink-2">
+          <div className="mt-1 flex flex-wrap gap-x-3 text-[14px] text-muted-foreground">
             <span className="font-mono">{product.sku}</span>
             {describe(product) && <span>{describe(product)}</span>}
           </div>
@@ -264,11 +264,11 @@ export function MobilePickTask() {
             Взял ещё {remaining} — всего {line.qty} {product.unit}
           </BigButton>
         ) : (
-          <div className="h-16 rounded-xl bg-sunken text-ink-2 grid place-items-center text-[15px] text-center px-4 leading-snug">
+          <div className="h-16 rounded-xl bg-muted text-muted-foreground grid place-items-center text-[15px] text-center px-4 leading-snug">
             {atCell ? 'Подтверждение — только сканом товара' : 'Сначала подойдите к ячейке и сканируйте её'}
           </div>
         )}
-        <button onClick={() => nav('/m/pick')} className="h-11 text-[15px] text-ink-2 font-medium inline-flex items-center justify-center gap-1.5"><Pause size={16} /> Пауза — вернуться позже</button>
+        <button onClick={() => nav('/m/pick')} className="h-11 text-[15px] text-muted-foreground font-medium inline-flex items-center justify-center gap-1.5"><Pause size={16} /> Пауза — вернуться позже</button>
       </StickyAction>
       <span hidden data-testid="expected-barcode">{barcodeOf(s, product.id)}</span>
     </div>
@@ -277,10 +277,10 @@ export function MobilePickTask() {
 
 function Progress({ done, total }: { done: number; total: number }) {
   return (
-    <div className="bg-night px-4 pb-3">
+    <div className="bg-card px-4 pb-2.5 -mt-1 relative z-20">
       <div className="flex gap-1">
         {Array.from({ length: total }).map((_, i) => (
-          <span key={i} className={cx('h-1.5 flex-1 rounded-full', i < done ? 'bg-signal' : i === done ? 'bg-white/60' : 'bg-white/15')} />
+          <span key={i} className={cx('h-1.5 flex-1 rounded-full', i < done ? 'bg-primary' : i === done ? 'bg-foreground/40' : 'bg-muted')} />
         ))}
       </div>
     </div>
@@ -293,12 +293,12 @@ function OrderQr({ order }: { order: Order }) {
   const { s } = useApp()
   const items = s.orderItems.filter((i) => i.orderId === order.id)
   return (
-    <div className="bg-surface rounded-2xl border border-line p-4 flex items-center gap-4">
+    <div className="wms-panel p-4 flex items-center gap-4">
       {src && <img src={src} alt={`QR заказа ${order.number}`} className="w-[92px] h-[92px]" />}
       <div className="min-w-0">
-        <div className="text-[13px] uppercase tracking-wide font-semibold text-ink-3">QR заказа</div>
+        <div className="text-[13px] uppercase tracking-wide font-semibold text-muted-foreground/80">QR заказа</div>
         <div className="font-mono text-[26px] font-semibold leading-tight">ORD-{order.number}</div>
-        <div className="text-[14px] text-ink-2">{S.CHANNEL_LABEL[order.channel]} · {items.reduce((a, i) => a + i.qty, 0)} шт.</div>
+        <div className="text-[14px] text-muted-foreground">{S.CHANNEL_LABEL[order.channel]} · {items.reduce((a, i) => a + i.qty, 0)} шт.</div>
       </div>
     </div>
   )
@@ -310,19 +310,12 @@ function PickDone({ order }: { order: Order }) {
   const box = s.containers.find((c) => c.id === order.containerId)
   const next = useMemo(() => s.orders.filter((o) => o.status === 'to_pick').sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0], [s])
   return (
-    <div className="min-h-[100dvh] bg-ok text-white flex flex-col">
-      <div className="flex-1 px-6 pt-[max(48px,env(safe-area-inset-top))]">
-        <CheckCircle2 size={64} strokeWidth={1.6} />
-        <h1 className="text-[34px] font-bold leading-tight mt-5">Заказ №{order.number} собран</h1>
-        <p className="text-lg text-white/90 mt-3 leading-snug">
-          Отнесите {box ? <>короб <b className="font-mono">{box.code}</b></> : 'товар'} на стол упаковки.
-        </p>
-      </div>
-      <div className="px-5 safe-b grid gap-2.5">
-        {next && <button onClick={() => nav('/m/pick')} className="h-16 rounded-xl bg-white text-ok text-lg font-semibold" data-testid="next-order">Следующий заказ</button>}
-        <button onClick={() => nav('/m')} className="h-14 rounded-xl border-2 border-white/60 text-base font-medium">На главную</button>
-      </div>
-    </div>
+    <DoneScreen
+      title={<>Заказ №{order.number} собран</>}
+      text={<>Отнесите {box ? <>короб <b className="font-mono text-foreground">{box.code}</b></> : 'товар'} на стол упаковки.</>}
+      primary={next ? { label: 'Следующий заказ', onClick: () => nav('/m/pick'), testId: 'next-order' } : undefined}
+      secondary={{ label: 'На главную', onClick: () => nav('/m') }}
+    />
   )
 }
 
@@ -331,9 +324,9 @@ function Missing() {
     <div>
       <OpHeader title="Сборка" />
       <div className="p-6 text-center">
-        <Box className="mx-auto text-ink-3" size={40} />
+        <Box className="mx-auto text-muted-foreground/80" size={40} />
         <div className="mt-3 font-semibold">Заказ не найден</div>
-        <Link to="/m/pick" className="mt-4 inline-block text-info font-medium">К списку заказов</Link>
+        <Link to="/m/pick" className="mt-4 inline-block link font-medium">К списку заказов</Link>
       </div>
     </div>
   )

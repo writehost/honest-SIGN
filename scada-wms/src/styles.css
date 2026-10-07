@@ -1,91 +1,65 @@
 @import 'tailwindcss';
-@import '@fontsource/ibm-plex-sans/cyrillic-400.css';
-@import '@fontsource/ibm-plex-sans/cyrillic-500.css';
-@import '@fontsource/ibm-plex-sans/cyrillic-600.css';
-@import '@fontsource/ibm-plex-sans/cyrillic-700.css';
-@import '@fontsource/ibm-plex-sans/latin-400.css';
-@import '@fontsource/ibm-plex-sans/latin-500.css';
-@import '@fontsource/ibm-plex-sans/latin-600.css';
-@import '@fontsource/ibm-plex-sans/latin-700.css';
-@import '@fontsource/ibm-plex-mono/latin-500.css';
-@import '@fontsource/ibm-plex-mono/latin-600.css';
-@import '@fontsource/ibm-plex-mono/cyrillic-500.css';
+/* Fonts of the main SCADA System WMS: 'Inter' + 'Geist Mono' (see its @theme inline) */
+@import '@fontsource/inter/cyrillic-400.css';
+@import '@fontsource/inter/cyrillic-500.css';
+@import '@fontsource/inter/cyrillic-600.css';
+@import '@fontsource/inter/cyrillic-700.css';
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
+@import '@fontsource/inter/latin-700.css';
+@import '@fontsource/geist-mono/latin-500.css';
+@import '@fontsource/geist-mono/latin-600.css';
+@import '@fontsource/geist-mono/cyrillic-500.css';
+/* The tokens themselves — generated from scada_system, never edited here */
+@import './theme/scada-system.css';
 
-@theme {
-  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-
-  --color-paper: #f2f1ed;
-  --color-surface: #ffffff;
-  --color-sunken: #eae8e2;
-  --color-ink: #15171a;
-  --color-ink-2: #4b5058;
-  --color-ink-3: #868b93;
-  --color-line: #e1dfd8;
-  --color-line-2: #cdcac1;
-  --color-night: #16181b;
-  --color-night-2: #23262a;
-
-  /* Signal yellow — the colour of floor tape and rack labels. Used for location codes only. */
-  --color-signal: #ffd23f;
-  --color-signal-ink: #1b1a14;
-
-  --color-ok: #12804a;
-  --color-ok-bg: #e3f3e9;
-  --color-err: #cf2a1f;
-  --color-err-bg: #fbe7e5;
-  --color-warn: #a85f00;
-  --color-warn-bg: #fdf0d9;
-  --color-info: #2453c0;
-  --color-info-bg: #e5ecfb;
-
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
+/*
+ * The main WMS defines --success / --warning in :root but does not expose
+ * them to Tailwind; map the same variables (no new colours).
+ */
+@theme inline {
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
 }
 
-html {
-  -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
-}
-
-body {
-  margin: 0;
-  background: var(--color-paper);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-  font-feature-settings: 'tnum' 1;
-  -webkit-font-smoothing: antialiased;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-button {
-  cursor: pointer;
-}
-
-/* Grid items may shrink below their content, so truncated text stays inside phone width */
-.grid > * {
-  min-width: 0;
-}
-button:disabled {
-  cursor: not-allowed;
-}
-
-:focus-visible {
-  outline: 2px solid var(--color-info);
-  outline-offset: 2px;
+/* Same base layer as scada_system app/globals.css */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.82 0.02 90 / 0.9) oklch(0.96 0.01 90 / 0.5);
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    margin: 0;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
 }
 
 .tnum {
   font-variant-numeric: tabular-nums;
 }
 
-/* Mobile: the operation screens behave like a terminal — no rubber-band, no text selection on taps */
+/* Grid items may shrink below their content, so truncated text stays inside phone width */
+.grid > * {
+  min-width: 0;
+}
+
+/* Mobile terminal: no rubber-band, no text selection on taps (like .tsd-light-root in the main WMS) */
 .terminal {
+  color-scheme: light only;
   overscroll-behavior: none;
   user-select: none;
   -webkit-user-select: none;
@@ -103,76 +77,58 @@ button:disabled {
   padding-top: env(safe-area-inset-top);
 }
 
-@keyframes flash-ok {
-  0% { opacity: 0.85; }
-  100% { opacity: 0; }
+/* Confirmed scan: a short lime line runs across the top edge */
+@keyframes scan-ok {
+  0% { transform: scaleX(0); opacity: 1; }
+  55% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
 }
-.flash-ok {
-  animation: flash-ok 420ms ease-out forwards;
+.scan-ok-line {
+  transform-origin: left;
+  animation: scan-ok 520ms ease-out forwards;
 }
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-10px); }
-  40% { transform: translateX(9px); }
-  60% { transform: translateX(-6px); }
-  80% { transform: translateX(4px); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
 }
 .shake {
-  animation: shake 360ms ease-in-out;
+  animation: shake 340ms ease-in-out;
 }
 
 @keyframes rise {
-  from { transform: translateY(12px); opacity: 0; }
+  from { transform: translateY(10px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 .rise {
   animation: rise 180ms ease-out;
 }
 
-@keyframes scanline {
-  0% { top: 12%; }
-  50% { top: 84%; }
-  100% { top: 12%; }
+/* Same scan line keyframes as `.animate-scan` in the main WMS */
+@keyframes scan {
+  0% { top: 8%; }
+  50% { top: 88%; }
+  100% { top: 8%; }
 }
-.scanline {
-  animation: scanline 2.4s ease-in-out infinite;
-}
-
-/* Dense desktop tables */
-.dtable {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 13px;
-}
-.dtable th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: var(--color-surface);
-  text-align: left;
-  font-weight: 500;
-  font-size: 12px;
-  color: var(--color-ink-3);
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--color-line);
-  white-space: nowrap;
-}
-.dtable td {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--color-line);
-  vertical-align: middle;
-}
-.dtable tbody tr:hover td {
-  background: #faf9f6;
-}
-.dtable tbody tr.sel td {
-  background: #f5f3ec;
+.animate-scan-line {
+  animation: scan 2s ease-in-out infinite;
 }
 
 @media print {
   .no-print {
     display: none !important;
   }
+}
+
+/* Links — quiet, like «Все документы» / «Подробнее» in the main WMS panels */
+.link {
+  @apply font-medium text-foreground underline-offset-4 hover:underline;
+}
+
+/* Selected grid row — same hover tint as .wms-ag-row */
+.wms-ag-grid tbody tr.wms-ag-row.sel {
+  @apply bg-accent/30;
 }

@@ -145,7 +145,7 @@ export function MobileReceive() {
         title={receipt ? `Приёмка · ${receipt.number}` : 'Приёмка'}
         step={stepNo > 0 ? `${stepNo}/${quick ? 3 : 4}` : undefined}
         onBack={back}
-        right={quick && d.step !== 'pick-receipt' ? <span className="mr-2 inline-flex items-center gap-1 text-[12px] text-signal font-medium"><Zap size={13} />Быстро</span> : undefined}
+        right={quick && d.step !== 'pick-receipt' ? <span className="mr-1 inline-flex items-center gap-1 rounded-md border border-border/70 bg-background px-1.5 py-1 text-[12px] font-medium text-foreground"><Zap size={13} />Быстро</span> : undefined}
       />
 
       <div className="px-4 pt-4">
@@ -153,12 +153,12 @@ export function MobileReceive() {
           <>
             <button
               onClick={() => set({ step: 'product', receiptId: undefined })}
-              className="w-full text-left rounded-2xl bg-night text-white px-5 py-5 active:translate-y-px"
+              className="w-full text-left wms-panel px-4 py-4 shadow-[inset_4px_0_0_var(--primary)] active:bg-accent/25"
               data-testid="quick-receive"
             >
-              <div className="flex items-center gap-2 text-signal text-[13px] font-semibold uppercase tracking-wide"><Zap size={15} />Без документа</div>
-              <div className="text-[22px] font-semibold mt-1">Принять товар</div>
-              <div className="text-white/70 text-[15px] mt-0.5">товар → количество → ячейка</div>
+              <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-semibold uppercase tracking-wide"><Zap size={14} className="text-foreground" />Без документа</div>
+              <div className="text-[19px] font-semibold mt-1 text-foreground">Принять товар</div>
+              <div className="text-muted-foreground text-[14px] mt-0.5">товар → количество → ячейка</div>
             </button>
             {openReceipts.length > 0 && (
               <Section title="Ожидаемые поставки">
@@ -167,13 +167,13 @@ export function MobileReceive() {
                     const exp = r.lines.reduce((a, l) => a + l.expectedQty, 0)
                     const got = r.lines.reduce((a, l) => a + l.receivedQty, 0)
                     return (
-                      <button key={r.id} onClick={() => set({ step: 'product', receiptId: r.id })} className="text-left bg-surface border border-line rounded-xl px-4 py-3.5 flex items-center gap-3 active:bg-sunken">
-                        <Truck size={22} className="text-ink-2 shrink-0" />
+                      <button key={r.id} onClick={() => set({ step: 'product', receiptId: r.id })} className="text-left wms-panel px-4 py-3.5 flex items-center gap-3 active:bg-muted">
+                        <Truck size={22} className="text-muted-foreground shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-[16px] truncate">{r.supplier}</div>
-                          <div className="text-[13px] text-ink-2 font-mono">{r.number} · {r.lines.length} поз. · {got}/{exp} шт.</div>
+                          <div className="text-[13px] text-muted-foreground font-mono">{r.number} · {r.lines.length} поз. · {got}/{exp} шт.</div>
                         </div>
-                        <ChevronRight size={20} className="text-ink-3" />
+                        <ChevronRight size={20} className="text-muted-foreground/80" />
                       </button>
                     )
                   })}
@@ -192,10 +192,10 @@ export function MobileReceive() {
 
         {d.step === 'qty' && product && (
           <>
-            <div className="bg-surface rounded-2xl border border-line p-4"><ProductLine product={product} /></div>
-            <div className="mt-2 mb-4 text-[14px] text-ink-2 px-1">
+            <div className="wms-panel p-4"><ProductLine product={product} /></div>
+            <div className="mt-2 mb-4 text-[14px] text-muted-foreground px-1">
               Укажите количество — или сканируйте каждую единицу, счётчик прибавится сам.
-              {receipt && (() => { const l = receipt.lines.find((x) => x.productId === product.id); return l ? <> По поставке: <b className="text-ink">{l.expectedQty - l.receivedQty} шт.</b> осталось.</> : null })()}
+              {receipt && (() => { const l = receipt.lines.find((x) => x.productId === product.id); return l ? <> По поставке: <b className="text-foreground">{l.expectedQty - l.receivedQty} шт.</b> осталось.</> : null })()}
             </div>
             <Numpad value={d.qty} onChange={(qty) => set({ qty })} unit={product.unit} />
             <HiddenScan onScan={onProduct} />
@@ -209,8 +209,8 @@ export function MobileReceive() {
 
         {d.step === 'cell' && product && (
           <>
-            <div className="bg-surface rounded-2xl border border-line p-3 mb-3">
-              <ProductLine product={product} size={44} right={<span className="text-[22px] font-semibold tnum pr-1">{d.qty}<span className="text-sm text-ink-3 ml-1">{product.unit}</span></span>} />
+            <div className="wms-panel p-3 mb-3">
+              <ProductLine product={product} size={44} right={<span className="text-[22px] font-semibold tnum pr-1">{d.qty}<span className="text-sm text-muted-foreground/80 ml-1">{product.unit}</span></span>} />
             </div>
             <ScanPad
               compact
@@ -218,10 +218,10 @@ export function MobileReceive() {
               prompt="Шаг 3 · Сканируйте ячейку"
               target={suggested ? (
                 <div className="flex items-center gap-3">
-                  <span className="text-[15px] text-ink-2">Рекомендуем</span>
+                  <span className="text-[15px] text-muted-foreground">Рекомендуем</span>
                   <CellTag code={suggested.code} size="lg" />
                 </div>
-              ) : <span className="text-ink-2">Создайте ячейки на компьютере</span>}
+              ) : <span className="text-muted-foreground">Создайте ячейки на компьютере</span>}
               demo={cellCodes(s, suggested?.id)}
               demoEnabled={org.settings.demoScanner}
             />
@@ -230,15 +230,15 @@ export function MobileReceive() {
 
         {d.step === 'confirm' && product && cell && (
           <>
-            <div className="rounded-2xl bg-surface border border-line overflow-hidden">
+            <div className="wms-panel">
               <div className="p-4"><ProductLine product={product} /></div>
-              <div className="grid grid-cols-2 border-t border-line">
-                <div className="p-4 border-r border-line">
-                  <div className="text-[12px] uppercase tracking-wide text-ink-3 font-medium">Количество</div>
-                  <div className="text-[34px] font-semibold tnum leading-tight">{d.qty} <span className="text-base text-ink-3">{product.unit}</span></div>
+              <div className="grid grid-cols-2 border-t border-border">
+                <div className="p-4 border-r border-border">
+                  <div className="text-[12px] uppercase tracking-wide text-muted-foreground/80 font-medium">Количество</div>
+                  <div className="text-[34px] font-semibold tnum leading-tight">{d.qty} <span className="text-base text-muted-foreground/80">{product.unit}</span></div>
                 </div>
                 <div className="p-4">
-                  <div className="text-[12px] uppercase tracking-wide text-ink-3 font-medium mb-1.5">Ячейка</div>
+                  <div className="text-[12px] uppercase tracking-wide text-muted-foreground/80 font-medium mb-1.5">Ячейка</div>
                   <CellTag code={cell.code} size="lg" />
                 </div>
               </div>
@@ -250,13 +250,13 @@ export function MobileReceive() {
         )}
 
         {d.step !== 'pick-receipt' && d.placed.length > 0 && (
-          <Section title={`Принято за сессию · ${d.placed.reduce((a, x) => a + x.qty, 0)} шт.`} right={<button onClick={finish} className="text-[14px] font-semibold text-info">Завершить</button>}>
-            <div className="bg-surface rounded-xl border border-line divide-y divide-line">
+          <Section title={`Принято за сессию · ${d.placed.reduce((a, x) => a + x.qty, 0)} шт.`} right={<button onClick={finish} className="text-[14px] font-semibold link">Завершить</button>}>
+            <div className="wms-panel divide-y divide-border">
               {d.placed.slice(0, 8).map((x, i) => {
                 const p = s.products.find((pp) => pp.id === x.productId)
                 return (
                   <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="font-mono text-[12px] text-ink-3 w-10">{fmtTime(x.ts)}</span>
+                    <span className="font-mono text-[12px] text-muted-foreground/80 w-10">{fmtTime(x.ts)}</span>
                     <span className="flex-1 min-w-0 truncate text-[14px]">{p?.name}</span>
                     <span className="tnum font-semibold text-[15px]">{x.qty}</span>
                     <CellTag code={x.cellCode} size="sm" />
@@ -275,15 +275,15 @@ function ReceiptProgress({ receipt }: { receipt: NonNullable<ReturnType<typeof u
   const { s } = useApp()
   return (
     <Section title="По поставке">
-      <div className="bg-surface rounded-xl border border-line divide-y divide-line">
+      <div className="wms-panel divide-y divide-border">
         {receipt.lines.map((l) => {
           const p = s.products.find((x) => x.id === l.productId)
           const done = l.receivedQty >= l.expectedQty
           return (
             <div key={l.productId} className="flex items-center gap-3 px-4 py-3">
-              <span className={cx('h-5 w-5 rounded-full grid place-items-center shrink-0', done ? 'bg-ok text-white' : 'border-2 border-line-2')}>{done && <Check size={13} strokeWidth={3} />}</span>
+              <span className={cx('h-5 w-5 rounded-full grid place-items-center shrink-0', done ? 'bg-primary text-primary-foreground' : 'border-2 border-border')}>{done && <Check size={13} strokeWidth={3} />}</span>
               <span className="flex-1 min-w-0 truncate text-[15px]">{p?.name}</span>
-              <span className="tnum text-[15px] font-semibold">{l.receivedQty}<span className="text-ink-3 font-normal">/{l.expectedQty}</span></span>
+              <span className="tnum text-[15px] font-semibold">{l.receivedQty}<span className="text-muted-foreground/80 font-normal">/{l.expectedQty}</span></span>
             </div>
           )
         })}

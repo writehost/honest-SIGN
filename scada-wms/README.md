@@ -25,6 +25,30 @@ npm run dev            # http://localhost:5173
 и заведомо неверных кодов. USB/Bluetooth-сканер работает сразу (режим клавиатуры), камера —
 по нажатию на видоискатель. Терминал удобно смотреть в DevTools в режиме телефона.
 
+## Дизайн-система
+
+Mini WMS — младший модуль **SCADA System WMS** и использует её дизайн-систему, а не свою:
+
+* токены (`--background`, `--primary`, `--border`, `--radius`, …), `@theme inline` и классы
+  `.wms-panel`, `.wms-metric-*`, `.wms-ag-grid` **копируются дословно** из
+  `writehost/scada_system/app/globals.css` в `src/theme/scada-system.css` скриптом
+  `node scripts/sync-scada-theme.mjs <путь к scada_system>` — файл не редактируется руками;
+* шрифты те же: Inter + Geist Mono;
+* кнопки, поля, бейджи статусов, сайдбар, шапка и мобильная навигация повторяют
+  `components/ui/button.tsx`, `input.tsx`, `components/wms/sidebar.tsx`, `header.tsx`, `app/mobile/layout.tsx`;
+* логотип — `logowmsscada.png` основного WMS.
+
+Своих цветов нет. Единственное дополнение — `--success` / `--warning`, которые основной WMS
+объявляет в `:root`, но не пробрасывает в Tailwind.
+
+<img src="docs/screens/compare-desktop.png" width="820">
+
+*Слева — дашборд основного SCADA System WMS, справа — кабинет Mini WMS.*
+
+<img src="docs/screens/compare-mobile.png" width="820">
+
+*Слева направо: ТСД основного WMS, главная Mini WMS, сборка, ошибка «Неверный товар».*
+
 ## Экраны
 
 | Телефон — терминал `/m` | Компьютер — кабинет `/app` |
@@ -57,13 +81,14 @@ npm run shots            # скриншоты всех экранов 390×844, 
 ## Стек
 
 React 19 + TypeScript + Vite + Tailwind 4, PWA (manifest + service worker), `qrcode` +
-`jspdf` для этикеток, `BarcodeDetector` / ZXing для камеры. Шрифты IBM Plex Sans / Mono.
+`jspdf` для этикеток, `BarcodeDetector` / ZXing для камеры. Дизайн-токены и шрифты (Inter, Geist Mono) — из SCADA System WMS.
 Бэкенд по плану — modular monolith (FastAPI или Django) + PostgreSQL с RLS; без Kafka,
 Kubernetes, Elasticsearch и микросервисов.
 
 ## Структура
 
 ```
+src/theme/      токены SCADA System WMS (генерируется scripts/sync-scada-theme.mjs)
 src/domain/     типы, транзакционное хранилище, сервисы (вся бизнес-логика), тарифы, коннекторы
 src/scan/       камера, HID-сканер, полноэкранные результаты скана
 src/mobile/     терминал склада

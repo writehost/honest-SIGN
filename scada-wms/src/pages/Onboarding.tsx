@@ -35,23 +35,23 @@ export function Onboarding() {
   const left = STEPS.slice(step).reduce((a, x) => a + x.min, 0)
 
   return (
-    <div className="min-h-[100dvh] bg-paper">
-      <header className="h-16 px-5 md:px-8 flex items-center justify-between border-b border-line bg-surface">
+    <div className="min-h-[100dvh] bg-background">
+      <header className="h-16 px-5 md:px-8 flex items-center justify-between border-b border-border bg-card">
         <Logo />
-        <button onClick={() => finish('/app')} className="text-[13px] text-ink-2 hover:text-ink">Пропустить настройку</button>
+        <button onClick={() => finish('/app')} className="text-[13px] text-muted-foreground hover:text-foreground">Пропустить настройку</button>
       </header>
       <div className="max-w-[1080px] mx-auto px-5 md:px-8 py-8 md:py-12 grid md:grid-cols-[240px_1fr] gap-8 md:gap-12">
         <aside>
-          <div className="text-[13px] text-ink-2">Осталось примерно {left} мин</div>
+          <div className="text-[13px] text-muted-foreground">Осталось примерно {left} мин</div>
           <ol className="mt-4 grid gap-1">
             {STEPS.map((x, i) => (
               <li key={x.title}>
-                <button onClick={() => i <= Math.max(initial, step) && setStep(i)} className={cx('w-full flex items-center gap-3 rounded-md px-2 py-2 text-left', i === step ? 'bg-surface border border-line' : '')}>
-                  <span className={cx('h-6 w-6 rounded-full grid place-items-center text-[12px] font-semibold shrink-0', done[i] && i !== step ? 'bg-ok text-white' : i === step ? 'bg-ink text-white' : 'bg-sunken text-ink-3')}>
+                <button onClick={() => i <= Math.max(initial, step) && setStep(i)} className={cx('w-full flex items-center gap-3 rounded-md px-2 py-2 text-left', i === step ? 'bg-card border border-border' : '')}>
+                  <span className={cx('h-6 w-6 rounded-full grid place-items-center text-[12px] font-semibold shrink-0', done[i] && i !== step ? 'bg-success text-white' : i === step ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground/80')}>
                     {done[i] && i !== step ? <Check size={13} strokeWidth={3} /> : i + 1}
                   </span>
-                  <span className={cx('text-sm', i === step ? 'font-semibold' : 'text-ink-2')}>{x.title}</span>
-                  <span className="ml-auto text-[12px] text-ink-3">{x.min} мин</span>
+                  <span className={cx('text-sm', i === step ? 'font-semibold' : 'text-muted-foreground')}>{x.title}</span>
+                  <span className="ml-auto text-[12px] text-muted-foreground/80">{x.min} мин</span>
                 </button>
               </li>
             ))}
@@ -73,9 +73,9 @@ export function Onboarding() {
 function Head({ n, title, text }: { n: number; title: string; text: ReactNode }) {
   return (
     <div className="mb-6">
-      <div className="text-[13px] font-mono text-ink-3">Шаг {n} из 5</div>
+      <div className="text-[13px] font-mono text-muted-foreground/80">Шаг {n} из 5</div>
       <h1 className="text-[28px] font-bold tracking-tight mt-1">{title}</h1>
-      <p className="text-ink-2 mt-1.5 max-w-[620px]">{text}</p>
+      <p className="text-muted-foreground mt-1.5 max-w-[620px]">{text}</p>
     </div>
   )
 }
@@ -95,7 +95,7 @@ function StepWarehouse({ onNext }: { onNext: () => void }) {
   return (
     <>
       <Head n={1} title="Ваш склад" text="Это может быть комната, гараж или бокс. Позже добавите зоны и ячейки." />
-      <div className="bg-surface border border-line rounded-xl p-5 grid gap-4 max-w-[520px]">
+      <div className="wms-panel p-5 grid gap-4 max-w-[520px]">
         <Field label="Название"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} disabled={!!warehouse} data-testid="wh-name" /></Field>
         <Field label="Адрес" hint="Необязательно"><Input value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} disabled={!!warehouse} placeholder="Город, улица, бокс" /></Field>
         <div><Button variant="primary" size="lg" onClick={save} data-testid="wh-save">{warehouse ? 'Дальше' : 'Создать склад'} <ArrowRight size={18} /></Button></div>
@@ -125,12 +125,12 @@ function StepProducts({ onNext }: { onNext: () => void }) {
   return (
     <>
       <Head n={2} title="Товары" text="Название, SKU и штрихкод — этого достаточно, чтобы начать. Фото, бренд и размеры добавите потом." />
-      <div className="flex gap-1 mb-4 p-1 bg-sunken rounded-lg w-fit">
+      <div className="mb-4 inline-flex h-9 items-center rounded-lg bg-muted p-[3px]">
         {(['manual', 'csv'] as const).map((m) => (
-          <button key={m} onClick={() => setMode(m)} className={cx('h-8 px-3 rounded-md text-sm', mode === m ? 'bg-surface shadow-sm font-medium' : 'text-ink-2')}>{m === 'manual' ? 'Вручную' : 'Из CSV / Excel'}</button>
+          <button key={m} onClick={() => setMode(m)} className={cx('h-[calc(100%-1px)] px-3 rounded-md border border-transparent text-sm font-medium', mode === m ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground')}>{m === 'manual' ? 'Вручную' : 'Из CSV / Excel'}</button>
         ))}
       </div>
-      <div className="bg-surface border border-line rounded-xl p-5">
+      <div className="wms-panel p-5">
         {mode === 'manual' ? (
           <form onSubmit={add} className="grid md:grid-cols-[1.6fr_1fr_1fr_auto] gap-3 items-end">
             <Field label="Название"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Футболка Nike чёрная XL" data-testid="p-name" /></Field>
@@ -141,16 +141,16 @@ function StepProducts({ onNext }: { onNext: () => void }) {
         ) : (
           <CsvImporter kind="products" />
         )}
-        <div className="mt-4 text-[13px] text-ink-2">Нет данных под рукой? <button onClick={sample} className="text-info font-medium">Добавить 6 товаров-примеров</button></div>
+        <div className="mt-4 text-[13px] text-muted-foreground">Нет данных под рукой? <button onClick={sample} className="link font-medium">Добавить 6 товаров-примеров</button></div>
       </div>
       {s.products.length > 0 && (
-        <div className="mt-4 bg-surface border border-line rounded-xl divide-y divide-line">
+        <div className="mt-4 wms-panel divide-y divide-border">
           {s.products.slice(-8).map((p) => (
             <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
               <ProductThumb product={p} size={32} />
               <span className="flex-1">{p.name}</span>
-              <span className="font-mono text-ink-2">{p.sku}</span>
-              <span className="font-mono text-ink-3 w-36 text-right">{s.barcodes.find((b) => b.productId === p.id)?.code}</span>
+              <span className="font-mono text-muted-foreground">{p.sku}</span>
+              <span className="font-mono text-muted-foreground/80 w-36 text-right">{s.barcodes.find((b) => b.productId === p.id)?.code}</span>
             </div>
           ))}
         </div>
@@ -166,9 +166,9 @@ function StepCells({ onNext }: { onNext: () => void }) {
   return (
     <>
       <Head n={3} title="Ячейки" text={<>Адрес ячейки — <b>зона-стеллаж-место</b>. Например, A-01-03: зона A, первый стеллаж, третье место. Начните с одного стеллажа — добавить можно в любой момент.</>} />
-      <div className="bg-surface border border-line rounded-xl p-5"><CellRangeForm /></div>
+      <div className="wms-panel p-5"><CellRangeForm /></div>
       {codes.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-1.5">{codes.slice(0, 60).map((c) => <CellTag key={c} code={c} />)}{codes.length > 60 && <span className="text-sm text-ink-3">ещё {codes.length - 60}</span>}</div>
+        <div className="mt-4 flex flex-wrap gap-1.5">{codes.slice(0, 60).map((c) => <CellTag key={c} code={c} />)}{codes.length > 60 && <span className="text-sm text-muted-foreground/80">ещё {codes.length - 60}</span>}</div>
       )}
       <div className="mt-6"><Button variant="primary" size="lg" disabled={!codes.length} onClick={onNext} data-testid="cells-next">Дальше <ArrowRight size={18} /></Button></div>
     </>
@@ -182,12 +182,12 @@ function StepLabels({ onNext }: { onNext: () => void }) {
     <>
       <Head n={4} title="QR-этикетки на ячейки" text="Код ячейки и QR — больше ничего. Подойдёт термопринтер, на котором вы печатаете этикетки маркетплейсов, или обычный принтер." />
       <div className="grid lg:grid-cols-[1fr_300px] gap-6">
-        <div className="bg-sunken rounded-xl p-5"><LabelPreview codes={codes} /></div>
+        <div className="bg-muted rounded-xl p-5"><LabelPreview codes={codes} /></div>
         <div><LabelPrinter codes={codes} title="Ячеек" /></div>
       </div>
       <div className="mt-6 flex items-center gap-3">
         <Button variant="primary" size="lg" onClick={onNext} data-testid="labels-next">Наклеил — дальше <ArrowRight size={18} /></Button>
-        <span className="text-[13px] text-ink-3">Можно распечатать позже в разделе «Склад»</span>
+        <span className="text-[13px] text-muted-foreground/80">Можно распечатать позже в разделе «Склад»</span>
       </div>
     </>
   )
@@ -200,20 +200,20 @@ function StepReceive({ onFinish }: { onFinish: (to: string) => void }) {
     <>
       <Head n={5} title="Первая приёмка — с телефона" text="Телефон и есть терминал сбора данных. Откройте приложение, отсканируйте товар, укажите количество и отсканируйте ячейку." />
       <div className="grid md:grid-cols-2 gap-4">
-        <div className="bg-surface border border-line rounded-xl p-5 flex gap-5">
+        <div className="wms-panel p-5 flex gap-5">
           <QrImg text={url} size={132} />
           <div>
             <div className="flex items-center gap-2 font-semibold"><Smartphone size={18} />На телефоне</div>
-            <ol className="mt-2 text-[14px] text-ink-2 grid gap-1 list-decimal pl-4">
+            <ol className="mt-2 text-[14px] text-muted-foreground grid gap-1 list-decimal pl-4">
               <li>Наведите камеру на QR</li>
-              <li>Войдите как <b className="text-ink">{user.email || user.name}</b></li>
+              <li>Войдите как <b className="text-foreground">{user.email || user.name}</b></li>
               <li>«Добавить на главный экран» — и это ваш ТСД</li>
             </ol>
           </div>
         </div>
-        <div className="bg-surface border border-line rounded-xl p-5 flex flex-col">
+        <div className="wms-panel p-5 flex flex-col">
           <div className="flex items-center gap-2 font-semibold"><Monitor size={18} />На этом устройстве</div>
-          <p className="mt-2 text-[14px] text-ink-2 flex-1">USB-сканер штрихкодов работает сразу, как клавиатура. Можно принять товар прямо отсюда.</p>
+          <p className="mt-2 text-[14px] text-muted-foreground flex-1">USB-сканер штрихкодов работает сразу, как клавиатура. Можно принять товар прямо отсюда.</p>
           <div className="mt-3 flex gap-2 flex-wrap">
             <Button variant="primary" onClick={() => onFinish('/m/receive')} data-testid="go-receive">Принять товар</Button>
             <Button onClick={() => onFinish('/app')}>Открыть кабинет</Button>

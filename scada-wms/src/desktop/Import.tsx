@@ -100,34 +100,34 @@ export function CsvImporter({ kind, onDone }: { kind: ImportKind; onDone?: (r: S
         <input ref={input} type="file" accept=".csv,text/csv" hidden onChange={(e) => e.target.files?.[0] && load(e.target.files[0])} data-testid={`csv-${kind}`} />
         <Button variant="primary" onClick={() => input.current?.click()}><FileUp size={16} />Выбрать CSV</Button>
         <Button variant="ghost" onClick={() => download(`template-${kind}.csv`, toCsv(spec.template))}><Download size={16} />Шаблон</Button>
-        {fileName && <span className="text-[13px] text-ink-2 font-mono">{fileName}</span>}
+        {fileName && <span className="text-[13px] text-muted-foreground font-mono">{fileName}</span>}
       </div>
 
       {rows && (
-        <div className="mt-4 border border-line rounded-lg overflow-hidden bg-surface">
-          <div className="px-3 py-2 border-b border-line flex items-center gap-2 text-[13px] flex-wrap">
-            <span className="text-ink-2">Строк: <b className="text-ink">{body.length}</b></span>
-            <span className="text-ink-3">·</span>
+        <div className="mt-4 border border-border rounded-lg overflow-hidden bg-card">
+          <div className="px-3 py-2 border-b border-border flex items-center gap-2 text-[13px] flex-wrap">
+            <span className="text-muted-foreground">Строк: <b className="text-foreground">{body.length}</b></span>
+            <span className="text-muted-foreground/80">·</span>
             {Object.keys(spec.aliases).filter((k) => map[k] !== undefined).map((k) => <Pill key={k} tone="ok">{header[map[k]]}</Pill>)}
             {missing.map((k) => <Pill key={k} tone="err">нет колонки «{spec.aliases[k][0]}»</Pill>)}
           </div>
           <div className="max-h-[260px] overflow-auto">
-            <table className="dtable">
+            <table className="wms-ag-grid wms-ag-grid--fit">
               <thead><tr><th>#</th>{header.map((h, i) => <th key={i}>{h}</th>)}</tr></thead>
-              <tbody>{body.slice(0, 50).map((r, i) => <tr key={i}><td className="text-ink-3 tnum">{i + 2}</td>{header.map((_, j) => <td key={j} className="whitespace-nowrap">{r[j]}</td>)}</tr>)}</tbody>
+              <tbody>{body.slice(0, 50).map((r, i) => <tr key={i} className="wms-ag-row"><td className="text-muted-foreground/80 tnum">{i + 2}</td>{header.map((_, j) => <td key={j} className="whitespace-nowrap">{r[j]}</td>)}</tr>)}</tbody>
             </table>
           </div>
-          <div className="px-3 py-2.5 border-t border-line flex justify-end">
+          <div className="px-3 py-2.5 border-t border-border flex justify-end">
             <Button variant="primary" disabled={missing.length > 0 || !body.length} onClick={run} data-testid="csv-run"><Upload size={16} />Импортировать {body.length} строк</Button>
           </div>
         </div>
       )}
 
       {result && (
-        <div className={cx('mt-4 rounded-lg border px-4 py-3', result.errors.length ? 'border-warn/40 bg-warn-bg' : 'border-ok/30 bg-ok-bg')}>
-          <div className="flex items-center gap-2 font-medium text-sm"><CheckCircle2 size={16} className="text-ok" />Создано: {result.created}{result.updated > 0 && ` · обновлено: ${result.updated}`} · ошибок: {result.errors.length}</div>
+        <div className={cx('mt-4 rounded-lg border px-4 py-3', result.errors.length ? 'border-amber-500/40 bg-amber-500/10' : 'border-success/30 bg-success/10')}>
+          <div className="flex items-center gap-2 font-medium text-sm"><CheckCircle2 size={16} className="text-success" />Создано: {result.created}{result.updated > 0 && ` · обновлено: ${result.updated}`} · ошибок: {result.errors.length}</div>
           {result.errors.length > 0 && (
-            <ul className="mt-2 text-[13px] grid gap-0.5">{result.errors.slice(0, 12).map((e, i) => <li key={i}><span className="font-mono text-ink-3">стр. {e.row}</span> — {e.message}</li>)}</ul>
+            <ul className="mt-2 text-[13px] grid gap-0.5">{result.errors.slice(0, 12).map((e, i) => <li key={i}><span className="font-mono text-muted-foreground/80">стр. {e.row}</span> — {e.message}</li>)}</ul>
           )}
         </div>
       )}
@@ -143,12 +143,12 @@ export function ImportPage() {
       <div className="grid grid-cols-[240px_1fr] gap-6">
         <div className="grid gap-1 content-start">
           {(Object.keys(SPEC) as ImportKind[]).map((k) => (
-            <button key={k} onClick={() => setKind(k)} className={cx('text-left rounded-md px-3 py-2 text-sm', kind === k ? 'bg-surface border border-line font-medium' : 'text-ink-2 hover:bg-sunken')}>{SPEC[k].title}</button>
+            <button key={k} onClick={() => setKind(k)} className={cx('text-left rounded-md px-3 py-2 text-sm', kind === k ? 'bg-card border border-border font-medium' : 'text-muted-foreground hover:bg-muted')}>{SPEC[k].title}</button>
           ))}
         </div>
-        <div className="bg-surface border border-line rounded-xl p-5">
+        <div className="wms-panel p-5">
           <h2 className="font-semibold">{SPEC[kind].title}</h2>
-          <p className="text-[13px] text-ink-2 mt-1 mb-4">{SPEC[kind].desc}</p>
+          <p className="text-[13px] text-muted-foreground mt-1 mb-4">{SPEC[kind].desc}</p>
           <CsvImporter key={kind} kind={kind} />
         </div>
       </div>

@@ -19,62 +19,61 @@ export function MobileHome() {
 
   return (
     <div className="pb-24">
-      <header className="px-5 pt-[max(18px,env(safe-area-inset-top))] pb-4 bg-paper">
-        <div className="flex items-center justify-between">
-          <div className="text-[13px] text-ink-2 truncate">{warehouse?.name ?? 'Склад'}</div>
-          <Link to="/m/more" className="h-9 w-9 rounded-full bg-night text-white grid place-items-center text-sm font-semibold" aria-label="Профиль">
+      <header className="px-4 pt-[max(16px,env(safe-area-inset-top))] pb-3">
+        <div className="flex items-center gap-3">
+          <Link to="/m/more" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-foreground text-background text-[15px] font-semibold" aria-label="Профиль">
             {user.name.slice(0, 1)}
           </Link>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-base font-bold text-foreground">{user.name}</div>
+            <div className="truncate text-xs text-muted-foreground">{warehouse?.name ?? 'Склад'}</div>
+          </div>
         </div>
-        <h1 className="mt-3 text-[30px] font-bold tracking-tight leading-none">Сегодня</h1>
-        <div className="mt-1.5 text-[15px] text-ink-2 first-letter:uppercase">{today}</div>
+        <div className="mt-4 flex items-baseline justify-between gap-2">
+          <h1 className="text-2xl font-bold tracking-tight">Сегодня</h1>
+          <span className="text-[13px] text-muted-foreground first-letter:uppercase">{today}</span>
+        </div>
       </header>
 
       <div className="px-4">
-        <Link to="/m/search" className="flex items-center gap-3 h-14 px-4 rounded-xl bg-surface border border-line-2 text-ink-3 text-[16px]">
-          <ScanLine size={22} className="text-ink" />
+        <Link to="/m/search" className="flex h-12 items-center gap-3 rounded-xl border border-input bg-card px-3.5 text-[15px] text-muted-foreground shadow-xs">
+          <ScanLine size={20} className="text-foreground" />
           Сканируйте или найдите товар
         </Link>
 
-        <div className="mt-5 grid gap-2.5">
+        <h2 className="mt-5 mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Операции</h2>
+        <nav className="wms-panel divide-y divide-border/70">
           <OpRow
             to="/m/pick"
-            dark
-            icon={<ShoppingBasket size={26} />}
+            main
+            icon={<ShoppingBasket size={22} />}
             title="Сборка"
             note={mine ? `Продолжить заказ №${mine.number}` : toPick ? `${toPick} ${plural(toPick, 'заказ', 'заказа', 'заказов')} к сборке` : 'Нет заказов к сборке'}
             count={toPick}
           />
-          <OpRow to="/m/pack" icon={<PackageCheck size={26} />} title="Упаковка" note={toPack ? `${toPack} ${plural(toPack, 'заказ ждёт', 'заказа ждут', 'заказов ждут')} проверки` : 'Нечего упаковывать'} count={toPack} />
-          <OpRow to="/m/receive" icon={<ArrowDownToLine size={26} />} title="Приёмка" note={receipts ? `${receipts} ${plural(receipts, 'поставка ожидается', 'поставки ожидаются', 'поставок ожидается')}` : 'Принять товар на склад'} count={receipts} />
-          <OpRow to="/m/move" icon={<ArrowLeftRight size={26} />} title="Перемещение" note="Из ячейки в ячейку" />
-          <OpRow to="/m/inventory" icon={<ClipboardCheck size={26} />} title="Инвентаризация" note="Пересчитать ячейку" />
-        </div>
+          <OpRow to="/m/pack" icon={<PackageCheck size={22} />} title="Упаковка" note={toPack ? `${toPack} ${plural(toPack, 'заказ ждёт', 'заказа ждут', 'заказов ждут')} проверки` : 'Нечего упаковывать'} count={toPack} />
+          <OpRow to="/m/receive" icon={<ArrowDownToLine size={22} />} title="Приёмка" note={receipts ? `${receipts} ${plural(receipts, 'поставка ожидается', 'поставки ожидаются', 'поставок ожидается')}` : 'Принять товар на склад'} count={receipts} />
+          <OpRow to="/m/move" icon={<ArrowLeftRight size={22} />} title="Перемещение" note="Из ячейки в ячейку" />
+          <OpRow to="/m/inventory" icon={<ClipboardCheck size={22} />} title="Инвентаризация" note="Пересчитать ячейку" />
+        </nav>
       </div>
       <BottomNav />
     </div>
   )
 }
 
-function OpRow({ to, icon, title, note, count, dark }: { to: string; icon: ReactNode; title: string; note: string; count?: number; dark?: boolean }) {
+function OpRow({ to, icon, title, note, count, main }: { to: string; icon: ReactNode; title: string; note: string; count?: number; main?: boolean }) {
   return (
-    <Link
-      to={to}
-      className={cx(
-        'flex items-center gap-4 rounded-2xl px-4 h-[84px] active:translate-y-px',
-        dark ? 'bg-night text-white' : 'bg-surface border border-line',
-      )}
-    >
-      <div className={cx('h-12 w-12 rounded-xl grid place-items-center shrink-0', dark ? 'bg-signal text-signal-ink' : 'bg-sunken text-ink')}>{icon}</div>
-      <div className="flex-1 min-w-0">
-        <div className="text-[20px] font-semibold leading-tight">{title}</div>
-        <div className={cx('text-[14px] truncate mt-0.5', dark ? 'text-white/70' : 'text-ink-2')}>{note}</div>
+    <Link to={to} className="flex min-h-[76px] items-center gap-3.5 px-4 py-3 transition-colors active:bg-accent/25">
+      <div className={cx('grid h-11 w-11 shrink-0 place-items-center rounded-xl', main ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground')}>{icon}</div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[17px] font-semibold leading-tight text-foreground">{title}</div>
+        <div className="mt-0.5 truncate text-[14px] text-muted-foreground">{note}</div>
       </div>
       {count ? (
-        <span className={cx('min-w-9 h-9 px-2.5 rounded-full grid place-items-center text-[17px] font-semibold tnum', dark ? 'bg-white text-ink' : 'bg-ink text-white')}>{count}</span>
-      ) : (
-        <ChevronRight size={22} className={dark ? 'text-white/50' : 'text-ink-3'} />
-      )}
+        <span className={cx('grid h-7 min-w-7 place-items-center rounded-md px-2 text-[14px] font-semibold tnum', main ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground')}>{count}</span>
+      ) : null}
+      <ChevronRight size={18} className="shrink-0 text-muted-foreground" />
     </Link>
   )
 }

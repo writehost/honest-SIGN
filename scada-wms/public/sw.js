@@ -1,9 +1,9 @@
 // App-shell service worker: the terminal opens even with no network.
 // Data operations are not cached here — they go through the outbox (src/lib/net.ts).
-const CACHE = 'scada-wms-v1'
+const CACHE = 'scada-wms-v2'
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/manifest.webmanifest', '/icon.svg'])))
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/manifest.webmanifest', '/logo-64.png'])))
   self.skipWaiting()
 })
 

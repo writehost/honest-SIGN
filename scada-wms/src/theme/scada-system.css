@@ -1,0 +1,184 @@
+/*
+ * SCADA System WMS design tokens — GENERATED, do not edit.
+ * Copied verbatim from writehost/scada_system app/globals.css @ 830e929
+ * by scripts/sync-scada-theme.mjs. Change the tokens in the main WMS, then re-sync.
+ */
+
+:root {
+  --background: oklch(0.96 0.01 90);
+  --foreground: oklch(0.25 0.04 145);
+  --card: oklch(0.995 0 0);
+  --card-foreground: oklch(0.25 0.04 145);
+  --popover: oklch(0.995 0 0);
+  --popover-foreground: oklch(0.25 0.04 145);
+  --primary: oklch(0.83 0.18 115);
+  --primary-foreground: oklch(0.25 0.04 145);
+  --secondary: oklch(0.92 0.02 90);
+  --secondary-foreground: oklch(0.35 0.04 145);
+  --muted: oklch(0.92 0.02 90);
+  --muted-foreground: oklch(0.45 0.02 145);
+  --accent: oklch(0.83 0.18 115);
+  --accent-foreground: oklch(0.25 0.04 145);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.88 0.02 90);
+  --input: oklch(0.92 0.02 90);
+  --ring: oklch(0.83 0.18 115);
+  --chart-1: oklch(0.83 0.18 115);
+  --chart-2: oklch(0.55 0.12 250);
+  --chart-3: oklch(0.7 0.15 55);
+  --chart-4: oklch(0.55 0.2 25);
+  --chart-5: oklch(0.6 0.15 320);
+  --radius: 1rem;
+  --sidebar: oklch(0.995 0 0);
+  --sidebar-foreground: oklch(0.25 0.04 145);
+  --sidebar-primary: oklch(0.83 0.18 115);
+  --sidebar-primary-foreground: oklch(0.25 0.04 145);
+  --sidebar-accent: oklch(0.94 0.02 90);
+  --sidebar-accent-foreground: oklch(0.25 0.04 145);
+  --sidebar-border: oklch(0.9 0.02 90);
+  --sidebar-ring: oklch(0.83 0.18 115);
+  
+  --warning: oklch(0.7 0.15 55);
+  --warning-foreground: oklch(0.3 0.05 55);
+  --success: oklch(0.6 0.15 145);
+  --success-foreground: oklch(0.98 0 0);
+}
+
+@theme inline {
+  --font-sans: 'Inter', 'Inter Fallback', sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* Промышленные WMS-панели: карточки, таблицы, фильтры */
+@layer components {
+  .wms-panel {
+    @apply overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm;
+  }
+  .wms-panel-header {
+    @apply border-b border-border px-4 py-3;
+  }
+  .wms-panel-title {
+    @apply text-sm font-semibold tracking-tight text-foreground;
+  }
+  .wms-panel-subtitle {
+    @apply mt-0.5 text-xs leading-relaxed text-muted-foreground;
+  }
+  .wms-filter-bar {
+    @apply flex flex-wrap items-end gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-sm;
+  }
+  .wms-metric-card {
+    @apply rounded-2xl border border-border/70 bg-card p-4 shadow-sm;
+  }
+  .wms-metric-label {
+    @apply text-xs font-medium uppercase tracking-wide text-muted-foreground;
+  }
+  .wms-metric-value {
+    @apply mt-1 text-2xl font-semibold tabular-nums text-foreground;
+  }
+
+  /* AG Grid–подобный data grid для складских таблиц */
+  .wms-ag-grid {
+    @apply w-full min-w-[1080px] border-collapse text-[13px] leading-snug;
+  }
+  .wms-ag-grid thead th {
+    @apply border-b border-r border-border/80 bg-muted/70 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground last:border-r-0;
+  }
+  .wms-ag-grid thead th.wms-ag-sortable {
+    @apply cursor-pointer select-none transition-colors hover:bg-muted hover:text-foreground;
+  }
+  .wms-ag-grid tbody td {
+    @apply border-b border-r border-border/50 px-3 py-2 align-middle last:border-r-0;
+  }
+  .wms-ag-grid tbody tr.wms-ag-row {
+    @apply bg-card transition-colors;
+  }
+  .wms-ag-grid tbody tr.wms-ag-row:hover {
+    @apply bg-accent/25;
+  }
+  .wms-ag-grid tbody tr.wms-ag-row:nth-child(even):not(.wms-ag-row--warn):not(.wms-ag-row--critical) {
+    @apply bg-muted/25;
+  }
+  .wms-ag-grid tbody tr.wms-ag-row:nth-child(even):not(.wms-ag-row--warn):not(.wms-ag-row--critical):hover {
+    @apply bg-accent/30;
+  }
+  .wms-ag-grid tbody tr.wms-ag-row--warn {
+    @apply bg-sky-500/10 hover:bg-sky-500/15;
+  }
+  .wms-ag-grid tbody tr.wms-ag-row--critical {
+    @apply bg-destructive/10 hover:bg-destructive/15;
+  }
+  .wms-ag-cell-num {
+    @apply text-right tabular-nums;
+  }
+  .wms-ag-status {
+    @apply inline-flex items-center rounded-md border border-border/70 bg-background px-1.5 py-0.5 text-[11px] font-medium leading-none;
+  }
+
+.wms-ag-grid thead th.wms-ag-sticky-name,
+.wms-ag-grid tbody td.wms-ag-sticky-name {
+  position: sticky;
+  left: 0;
+}
+.wms-ag-grid thead th.wms-ag-sticky-name {
+  z-index: 20;
+  background-color: color-mix(in oklab, var(--muted) 88%, white);
+  box-shadow: 4px 0 8px -6px rgb(15 23 42 / 0.35);
+}
+.wms-ag-grid tbody td.wms-ag-sticky-name {
+  z-index: 2;
+  background-color: var(--card);
+  box-shadow: 4px 0 8px -6px rgb(15 23 42 / 0.35);
+}
+.wms-ag-grid tbody tr.wms-ag-row:nth-child(even):not(.wms-ag-row--warn):not(.wms-ag-row--critical) td.wms-ag-sticky-name {
+  background-color: color-mix(in oklab, var(--muted) 40%, var(--card));
+}
+.wms-ag-grid tbody tr.wms-ag-row:hover td.wms-ag-sticky-name {
+  background-color: color-mix(in oklab, var(--accent) 35%, var(--card));
+}
+
+.wms-ag-grid.wms-ag-grid--compact thead th,
+.wms-ag-grid.wms-ag-grid--compact tbody td {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+.wms-ag-grid.wms-ag-grid--fit {
+  min-width: 0;
+}
+}

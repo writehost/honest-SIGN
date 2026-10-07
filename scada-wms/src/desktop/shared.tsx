@@ -12,7 +12,7 @@ import { cx } from '@/lib/format'
 export function QrImg({ text, size = 96, className }: { text: string; size?: number; className?: string }) {
   const [src, setSrc] = useState('')
   useEffect(() => { void QRCode.toDataURL(text, { margin: 0, scale: 8 }).then(setSrc) }, [text])
-  return src ? <img src={src} alt={text} width={size} height={size} className={className} style={{ width: size, height: size, imageRendering: 'pixelated' }} /> : <div style={{ width: size, height: size }} className="bg-sunken" />
+  return src ? <img src={src} alt={text} width={size} height={size} className={className} style={{ width: size, height: size, imageRendering: 'pixelated' }} /> : <div style={{ width: size, height: size }} className="bg-muted" />
 }
 
 /** A-01-01 → A-01-50 generator. Returns the codes it created. */
@@ -40,17 +40,17 @@ export function CellRangeForm({ onCreated, compact }: { onCreated?: (codes: stri
       <div className={cx('grid gap-3', compact ? 'grid-cols-2' : 'grid-cols-[90px_1fr_1fr]')}>
         <Field label="Зона" className={compact ? 'col-span-2' : ''}><Input value={f.zone} maxLength={4} onChange={(e) => setF({ ...f, zone: e.target.value.toUpperCase() })} className="font-mono uppercase" data-testid="range-zone" /></Field>
         <Field label="Стеллажи, с — по">
-          <div className="flex items-center gap-1.5"><Input type="number" min={1} max={99} value={f.rackFrom} onChange={num('rackFrom')} className="tnum" /><span className="text-ink-3">—</span><Input type="number" min={1} max={99} value={f.rackTo} onChange={num('rackTo')} className="tnum" /></div>
+          <div className="flex items-center gap-1.5"><Input type="number" min={1} max={99} value={f.rackFrom} onChange={num('rackFrom')} className="tnum" /><span className="text-muted-foreground/80">—</span><Input type="number" min={1} max={99} value={f.rackTo} onChange={num('rackTo')} className="tnum" /></div>
         </Field>
         <Field label="Места на стеллаже, с — по">
-          <div className="flex items-center gap-1.5"><Input type="number" min={1} max={99} value={f.placeFrom} onChange={num('placeFrom')} className="tnum" data-testid="range-from" /><span className="text-ink-3">—</span><Input type="number" min={1} max={99} value={f.placeTo} onChange={num('placeTo')} className="tnum" data-testid="range-to" /></div>
+          <div className="flex items-center gap-1.5"><Input type="number" min={1} max={99} value={f.placeFrom} onChange={num('placeFrom')} className="tnum" data-testid="range-from" /><span className="text-muted-foreground/80">—</span><Input type="number" min={1} max={99} value={f.placeTo} onChange={num('placeTo')} className="tnum" data-testid="range-to" /></div>
         </Field>
       </div>
-      <div className="mt-4 rounded-lg bg-sunken px-4 py-3 flex items-center gap-3 flex-wrap">
-        <span className="font-mono text-[13px] font-semibold bg-signal px-1.5 rounded-sm">{codes[0]}</span>
-        <span className="text-ink-3">→</span>
-        <span className="font-mono text-[13px] font-semibold bg-signal px-1.5 rounded-sm">{codes[codes.length - 1]}</span>
-        <span className="text-[13px] text-ink-2">
+      <div className="mt-4 rounded-lg bg-muted px-4 py-3 flex items-center gap-3 flex-wrap">
+        <span className="font-mono text-[13px] font-semibold bg-primary px-1.5 rounded-sm">{codes[0]}</span>
+        <span className="text-muted-foreground/80">→</span>
+        <span className="font-mono text-[13px] font-semibold bg-primary px-1.5 rounded-sm">{codes[codes.length - 1]}</span>
+        <span className="text-[13px] text-muted-foreground">
           {codes.length} {codes.length === 1 ? 'ячейка' : 'ячеек'}{fresh.length !== codes.length && `, новых — ${fresh.length}`}
         </span>
         <span className="flex-1" />
@@ -77,12 +77,12 @@ export function LabelPrinter({ codes, title = 'Этикетки' }: { codes: str
   }
   return (
     <div>
-      <div className="text-[13px] font-medium text-ink-2 mb-2">{title}: {codes.length}</div>
+      <div className="text-[13px] font-medium text-muted-foreground mb-2">{title}: {codes.length}</div>
       <div className="grid gap-2">
         {(Object.keys(LABEL_FORMATS) as LabelFormat[]).map((k) => (
-          <label key={k} className={cx('flex items-start gap-3 rounded-lg border px-3 py-2.5 cursor-pointer', fmt === k ? 'border-ink bg-surface' : 'border-line bg-surface hover:border-line-2')}>
-            <input type="radio" name="fmt" checked={fmt === k} onChange={() => setFmt(k)} className="mt-1 accent-[#15171a]" />
-            <span><span className="block text-sm font-medium">{LABEL_FORMATS[k].name}</span><span className="block text-[12px] text-ink-3">{LABEL_FORMATS[k].hint}</span></span>
+          <label key={k} className={cx('flex items-start gap-3 rounded-lg border px-3 py-2.5 cursor-pointer', fmt === k ? 'border-primary bg-card' : 'border-border bg-card hover:border-border')}>
+            <input type="radio" name="fmt" checked={fmt === k} onChange={() => setFmt(k)} className="mt-1 accent-primary" />
+            <span><span className="block text-sm font-medium">{LABEL_FORMATS[k].name}</span><span className="block text-[12px] text-muted-foreground/80">{LABEL_FORMATS[k].hint}</span></span>
           </label>
         ))}
       </div>
@@ -98,12 +98,12 @@ export function LabelPreview({ codes, max = 6 }: { codes: string[]; max?: number
   return (
     <div className="flex flex-wrap gap-2">
       {codes.slice(0, max).map((c) => (
-        <div key={c} className="bg-white border border-line-2 rounded-[3px] w-[174px] h-[120px] flex flex-col items-center justify-center gap-1.5 shadow-sm">
+        <div key={c} className="bg-white border border-border rounded-[3px] w-[174px] h-[120px] flex flex-col items-center justify-center gap-1.5 shadow-sm">
           <span className="font-mono font-bold text-[25px] leading-none tracking-tight whitespace-nowrap">{c}</span>
           <QrImg text={c} size={72} />
         </div>
       ))}
-      {codes.length > max && <div className="w-[174px] h-[120px] grid place-items-center text-sm text-ink-3 border border-dashed border-line-2 rounded-[3px]">ещё {codes.length - max}</div>}
+      {codes.length > max && <div className="w-[174px] h-[120px] grid place-items-center text-sm text-muted-foreground/80 border border-dashed border-border rounded-[3px]">ещё {codes.length - max}</div>}
     </div>
   )
 }
@@ -112,8 +112,8 @@ export function PageHead({ title, sub, actions }: { title: string; sub?: React.R
   return (
     <div className="flex items-end justify-between gap-4 mb-5">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-tight">{title}</h1>
-        {sub && <div className="text-[13px] text-ink-2 mt-0.5">{sub}</div>}
+        <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+        {sub && <div className="text-sm text-muted-foreground mt-1">{sub}</div>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>

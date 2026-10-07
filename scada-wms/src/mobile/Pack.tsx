@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Check, CheckCircle2, ChevronRight, RotateCcw, Trash2 } from 'lucide-react'
+import { AlertTriangle, Check, ChevronRight, RotateCcw, Trash2 } from 'lucide-react'
 import { useApp } from '@/app/state'
 import * as S from '@/domain/services'
 import { runOp } from '@/lib/net'
@@ -7,7 +7,7 @@ import { usePersistentState } from '@/lib/persist'
 import { ScanPad } from '@/scan/ScanPad'
 import { flashOk, showError } from '@/scan/signals'
 import { BoxTag, ProductThumb } from '@/ui/kit'
-import { BigButton, OpHeader, Section, StickyAction } from './common'
+import { BigButton, DoneScreen, OpHeader, Section, StickyAction } from './common'
 import { barcodeOf, productCodes } from './demo'
 import { cx, plural } from '@/lib/format'
 import type { Order } from '@/domain/types'
@@ -44,17 +44,12 @@ export function MobilePack() {
   if (d.doneOrderId) {
     const done = s.orders.find((o) => o.id === d.doneOrderId)
     return (
-      <div className="min-h-[100dvh] bg-ok text-white flex flex-col">
-        <div className="flex-1 px-6 pt-[max(48px,env(safe-area-inset-top))]">
-          <CheckCircle2 size={64} strokeWidth={1.6} />
-          <h1 className="text-[34px] font-bold leading-tight mt-5">Заказ №{done?.number} упакован</h1>
-          <p className="text-lg text-white/90 mt-3">Комплектность проверена. Можно закрывать коробку и клеить этикетку маркетплейса.</p>
-        </div>
-        <div className="px-5 safe-b grid gap-2.5">
-          {waiting.length > 0 && <button onClick={() => setD(START)} className="h-16 rounded-xl bg-white text-ok text-lg font-semibold" data-testid="pack-next">Следующий заказ · ещё {waiting.length}</button>}
-          <button onClick={() => { setD(START); nav('/m') }} className="h-14 rounded-xl border-2 border-white/60 text-base font-medium">На главную</button>
-        </div>
-      </div>
+      <DoneScreen
+        title={<>Заказ №{done?.number} упакован</>}
+        text="Комплектность проверена. Можно закрывать коробку и клеить этикетку маркетплейса."
+        primary={waiting.length > 0 ? { label: `Следующий заказ · ещё ${waiting.length}`, onClick: () => setD(START), testId: 'pack-next' } : undefined}
+        secondary={{ label: 'На главную', onClick: () => { setD(START); nav('/m') } }}
+      />
     )
   }
 
@@ -90,20 +85,20 @@ export function MobilePack() {
           />
           <Section title={`Ждут упаковки · ${waiting.length}`}>
             {waiting.length === 0 ? (
-              <div className="bg-surface border border-line rounded-xl px-4 py-8 text-center text-ink-2">Нет собранных заказов</div>
+              <div className="wms-panel px-4 py-8 text-center text-muted-foreground">Нет собранных заказов</div>
             ) : (
               <div className="grid gap-2">
                 {waiting.map((o) => {
                   const box = s.containers.find((c) => c.id === o.containerId)
                   const n = s.orderItems.filter((i) => i.orderId === o.id).reduce((a, i) => a + i.qty, 0)
                   return (
-                    <button key={o.id} onClick={() => open(o)} className="text-left bg-surface border border-line rounded-xl px-4 py-3.5 flex items-center gap-3 active:bg-sunken">
+                    <button key={o.id} onClick={() => open(o)} className="text-left wms-panel px-4 py-3.5 flex items-center gap-3 active:bg-muted">
                       <div className="flex-1">
                         <div className="font-mono text-[19px] font-semibold">№{o.number}</div>
-                        <div className="text-[14px] text-ink-2">{S.CHANNEL_LABEL[o.channel]} · {n} шт.</div>
+                        <div className="text-[14px] text-muted-foreground">{S.CHANNEL_LABEL[o.channel]} · {n} шт.</div>
                       </div>
                       {box && <BoxTag code={box.code} />}
-                      <ChevronRight size={20} className="text-ink-3" />
+                      <ChevronRight size={20} className="text-muted-foreground/80" />
                     </button>
                   )
                 })}
@@ -167,21 +162,21 @@ export function MobilePack() {
 
   return (
     <div className="pb-48">
-      <OpHeader title={`Упаковка №${order.number}`} step={`${total - missing}/${total}`} onBack={() => setD(START)} right={box && <span className="mr-2"><BoxTag code={box.code} className="!bg-white/10" /></span>} />
+      <OpHeader title={`Упаковка №${order.number}`} step={`${total - missing}/${total}`} onBack={() => setD(START)} right={box && <span className="mr-2"><BoxTag code={box.code} /></span>} />
       <div className="px-4 pt-4">
         <ScanPad compact onScan={onScan} prompt="Сканируйте каждый товар, кладя его в коробку" demo={demoFor()} demoEnabled={org.settings.demoScanner} />
 
         {d.extras.length > 0 && (
-          <Section title={<span className="text-err">Лишнее в коробке · {d.extras.length}</span>}>
+          <Section title={<span className="text-destructive">Лишнее в коробке · {d.extras.length}</span>}>
             <div className="grid gap-2">
               {d.extras.map((x) => (
-                <div key={x.key} className="rounded-xl bg-err-bg border border-err/30 px-4 py-3 flex items-center gap-3">
-                  <AlertTriangle size={20} className="text-err shrink-0" />
+                <div key={x.key} className="rounded-xl bg-destructive/5 border border-destructive/30 px-4 py-3 flex items-center gap-3">
+                  <AlertTriangle size={20} className="text-destructive shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-[15px] font-semibold text-err">{x.reason === 'foreign' ? 'Не из этого заказа' : 'Лишняя единица'}</div>
+                    <div className="text-[15px] font-semibold text-destructive">{x.reason === 'foreign' ? 'Не из этого заказа' : 'Лишняя единица'}</div>
                     <div className="text-[14px] truncate">{x.code} · {x.label}</div>
                   </div>
-                  <button onClick={() => setD({ ...d, extras: d.extras.filter((e) => e.key !== x.key) })} className="h-11 px-3 rounded-lg bg-white border border-err/30 text-err text-[14px] font-semibold flex items-center gap-1.5" data-testid="remove-extra">
+                  <button onClick={() => setD({ ...d, extras: d.extras.filter((e) => e.key !== x.key) })} className="h-11 px-3 rounded-lg bg-white border border-destructive/30 text-destructive text-[14px] font-semibold flex items-center gap-1.5" data-testid="remove-extra">
                     <Trash2 size={16} /> Убрал
                   </button>
                 </div>
@@ -190,23 +185,23 @@ export function MobilePack() {
           </Section>
         )}
 
-        <Section title="Ожидается в заказе" right={<button onClick={() => setD({ ...START, orderId: order.id })} className="text-[13px] text-ink-2 inline-flex items-center gap-1"><RotateCcw size={14} />Сбросить</button>}>
+        <Section title="Ожидается в заказе" right={<button onClick={() => setD({ ...START, orderId: order.id })} className="text-[13px] text-muted-foreground inline-flex items-center gap-1"><RotateCcw size={14} />Сбросить</button>}>
           <div className="grid gap-2">
             {items.map((i) => {
               const p = s.products.find((x) => x.id === i.productId)!
               const got = d.counts[i.productId] ?? 0
               const ok = got >= i.qty
               return (
-                <div key={i.id} className={cx('rounded-xl border px-3 py-3 flex items-center gap-3', ok ? 'bg-ok-bg border-ok/30' : 'bg-surface border-line')}>
+                <div key={i.id} className={cx('rounded-xl border px-3 py-3 flex items-center gap-3', ok ? 'bg-card border-primary/60 shadow-[inset_4px_0_0_var(--primary)]' : 'bg-card border-border/70 shadow-sm')}>
                   <ProductThumb product={p} size={48} />
                   <div className="flex-1 min-w-0">
                     <div className="text-[15px] font-semibold leading-tight">{p.name}</div>
-                    <div className="text-[13px] text-ink-2 font-mono">{p.sku}</div>
+                    <div className="text-[13px] text-muted-foreground font-mono">{p.sku}</div>
                   </div>
-                  <div className={cx('text-[24px] font-bold tnum', ok ? 'text-ok' : 'text-ink')}>
-                    {got}<span className="text-ink-3 font-medium text-lg">/{i.qty}</span>
+                  <div className={cx('text-[24px] font-bold tnum', ok ? 'text-success' : 'text-foreground')}>
+                    {got}<span className="text-muted-foreground/80 font-medium text-lg">/{i.qty}</span>
                   </div>
-                  {ok && <Check size={22} className="text-ok" strokeWidth={3} />}
+                  {ok && <Check size={22} className="text-success" strokeWidth={3} />}
                 </div>
               )
             })}
@@ -215,7 +210,7 @@ export function MobilePack() {
       </div>
       <StickyAction>
         {!ready && (
-          <div className="text-[14px] text-center text-ink-2 -mb-0.5" data-testid="pack-blocker">
+          <div className="text-[14px] text-center text-muted-foreground -mb-0.5" data-testid="pack-blocker">
             {d.extras.length > 0
               ? `Уберите лишнее: ${d.extras.length} ${plural(d.extras.length, 'единица', 'единицы', 'единиц')}`
               : `Не хватает ${missing} ${plural(missing, 'единицы', 'единиц', 'единиц')}`}

@@ -22,10 +22,10 @@ interface Draft {
 const START: Draft = { counts: {}, review: false, doneCells: [] }
 
 const VERDICT: Record<S.InvVerdict, { label: string; cls: string }> = {
-  ok: { label: 'Совпало', cls: 'bg-ok-bg text-ok' },
-  missing: { label: 'Не хватает', cls: 'bg-warn-bg text-warn' },
-  surplus: { label: 'Лишнее', cls: 'bg-info-bg text-info' },
-  foreign: { label: 'Чужой товар', cls: 'bg-err text-white' },
+  ok: { label: 'Совпало', cls: 'border border-success/30 bg-success/10 text-success' },
+  missing: { label: 'Не хватает', cls: 'border border-amber-500/40 bg-amber-500/10 text-amber-900' },
+  surplus: { label: 'Лишнее', cls: 'border border-border bg-secondary text-foreground' },
+  foreign: { label: 'Чужой товар', cls: 'border border-destructive/30 bg-destructive/5 text-destructive' },
 }
 
 export function MobileInventory() {
@@ -54,7 +54,7 @@ export function MobileInventory() {
       <div className="pb-36">
         <OpHeader title="Инвентаризация" />
         <div className="px-4 pt-4">
-          <ScanPad onScan={onCell} prompt="Сканируйте QR ячейки" target={<span className="text-[15px] text-ink-2">Покажем, что там должно лежать, потом пересчитаете фактическое.</span>} demo={cellCodes(s, undefined, 6)} demoEnabled={org.settings.demoScanner} />
+          <ScanPad onScan={onCell} prompt="Сканируйте QR ячейки" target={<span className="text-[15px] text-muted-foreground">Покажем, что там должно лежать, потом пересчитаете фактическое.</span>} demo={cellCodes(s, undefined, 6)} demoEnabled={org.settings.demoScanner} />
           {d.doneCells.length > 0 && (
             <Section title={`Проверено ячеек · ${d.doneCells.length}`}>
               <div className="flex flex-wrap gap-1.5">{d.doneCells.map((c) => <CellTag key={c} code={c} />)}</div>
@@ -127,27 +127,27 @@ export function MobileInventory() {
 
         <Section
           title={d.review ? `Итог по ${cell.code}` : `Ожидается · посчитано ${counted}`}
-          right={!d.review && <button onClick={() => setShowExpected(!showExpected)} className="text-[13px] text-ink-2 inline-flex items-center gap-1">{showExpected ? <EyeOff size={14} /> : <Eye size={14} />}{showExpected ? 'Скрыть' : 'Показать'} ожидаемое</button>}
+          right={!d.review && <button onClick={() => setShowExpected(!showExpected)} className="text-[13px] text-muted-foreground inline-flex items-center gap-1">{showExpected ? <EyeOff size={14} /> : <Eye size={14} />}{showExpected ? 'Скрыть' : 'Показать'} ожидаемое</button>}
         >
           {rows.length === 0 ? (
-            <div className="bg-surface border border-line rounded-xl px-4 py-6 text-center text-ink-2">По системе ячейка пустая. Сканируйте, если что-то нашли.</div>
+            <div className="wms-panel px-4 py-6 text-center text-muted-foreground">По системе ячейка пустая. Сканируйте, если что-то нашли.</div>
           ) : (
             <div className="grid gap-2">
               {rows.map((r) => (
-                <button key={r.productId} onClick={() => !d.review && setEdit(r.productId)} className={cx('text-left rounded-xl border px-3 py-3 bg-surface', r.verdict === 'foreign' ? 'border-err' : 'border-line')}>
+                <button key={r.productId} onClick={() => !d.review && setEdit(r.productId)} className={cx('text-left rounded-xl border px-3 py-3 bg-card', r.verdict === 'foreign' ? 'border-destructive/40 shadow-[inset_4px_0_0_var(--destructive)]' : 'border-border/70 shadow-sm')}>
                   <div className="flex items-center gap-3">
                     <ProductThumb product={r.product} size={44} />
                     <div className="flex-1 min-w-0">
                       <div className="text-[15px] font-semibold leading-tight">{r.product.name}</div>
-                      <div className="text-[13px] font-mono text-ink-2">{r.product.sku}</div>
+                      <div className="text-[13px] font-mono text-muted-foreground">{r.product.sku}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-[22px] font-bold tnum leading-none">{r.counted}{showExpected && <span className="text-ink-3 font-medium text-base"> / {r.expected}</span>}</div>
+                      <div className="text-[22px] font-bold tnum leading-none">{r.counted}{showExpected && <span className="text-muted-foreground/80 font-medium text-base"> / {r.expected}</span>}</div>
                       {(showExpected || d.review) && (r.counted > 0 || d.review) && <span className={cx('inline-block mt-1 text-[11px] font-semibold px-1.5 py-px rounded', VERDICT[r.verdict].cls)}>{VERDICT[r.verdict].label}</span>}
                     </div>
                   </div>
                   {r.verdict === 'foreign' && r.elsewhere.length > 0 && (
-                    <div className="mt-2 text-[13px] text-err font-medium">По системе: {r.elsewhere.map((e) => `${e.cell.code} — ${e.qty} шт.`).join(', ')}</div>
+                    <div className="mt-2 text-[13px] text-destructive font-medium">По системе: {r.elsewhere.map((e) => `${e.cell.code} — ${e.qty} шт.`).join(', ')}</div>
                   )}
                 </button>
               ))}
@@ -161,9 +161,9 @@ export function MobileInventory() {
           <BigButton onClick={() => setD({ ...d, review: true })} testId="inv-review">Закончить ячейку <ChevronRight size={22} /></BigButton>
         ) : (
           <>
-            <div className="text-[14px] text-center text-ink-2">{issues.length ? `Расхождений: ${issues.length}. Остатки будут исправлены по факту.` : 'Расхождений нет'}</div>
+            <div className="text-[14px] text-center text-muted-foreground">{issues.length ? `Расхождений: ${issues.length}. Остатки будут исправлены по факту.` : 'Расхождений нет'}</div>
             <BigButton variant="ok" onClick={apply} testId="inv-apply"><Check size={22} /> {issues.length ? 'Применить и дальше' : 'Подтвердить и дальше'}</BigButton>
-            <button onClick={() => setD({ ...d, review: false })} className="h-10 text-[15px] text-ink-2">Пересчитать</button>
+            <button onClick={() => setD({ ...d, review: false })} className="h-10 text-[15px] text-muted-foreground">Пересчитать</button>
           </>
         )}
       </StickyAction>
