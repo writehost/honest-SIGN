@@ -95,7 +95,7 @@ fun HomeScreen(state: HomeUiState, onEnrollDevice: () -> Unit, onConnectYms: () 
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(ScadaRadius.md)).background(c.warning.copy(alpha = 0.12f)).padding(ScadaSpacing.md),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Outlined.CloudOff, contentDescription = null, tint = c.onWarning)
+                    Icon(Icons.Outlined.CloudOff, contentDescription = null, tint = c.warning)
                     Spacer(Modifier.padding(4.dp))
                     Text("Нет связи с WMS. Показаны сохранённые данные сессии.", style = MaterialTheme.typography.bodyMedium, color = c.onSurface)
                 }

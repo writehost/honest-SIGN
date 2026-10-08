@@ -19,6 +19,8 @@ camerax = "1.4.1"
 mlkitBarcode = "17.3.0"
 splashscreen = "1.0.1"
 junit = "4.13.2"
+robolectric = "4.14.1"
+roborazzi = "1.39.0"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -31,6 +33,11 @@ retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit
 retrofit-kotlinx-serialization = { module = "com.squareup.retrofit2:converter-kotlinx-serialization", version.ref = "retrofit" }
 javax-inject = { module = "javax.inject:javax.inject", version = "1" }
 junit = { module = "junit:junit", version.ref = "junit" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }
+roborazzi-compose = { module = "io.github.takahirom.roborazzi:roborazzi-compose", version.ref = "roborazzi" }
+compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
+compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
 
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }

@@ -47,10 +47,10 @@ fun ScadaScannerOverlay(modifier: Modifier = Modifier, success: Boolean = false,
         val w = 5.dp.toPx()
         val frame = Rect(left, top, left + side, top + side)
         val p = Path().apply {
-            moveTo(frame.left, frame.top + len); lineTo(frame.left, frame.top + r); quadraticBezierTo(frame.left, frame.top, frame.left + r, frame.top); lineTo(frame.left + len, frame.top)
-            moveTo(frame.right - len, frame.top); lineTo(frame.right - r, frame.top); quadraticBezierTo(frame.right, frame.top, frame.right, frame.top + r); lineTo(frame.right, frame.top + len)
-            moveTo(frame.right, frame.bottom - len); lineTo(frame.right, frame.bottom - r); quadraticBezierTo(frame.right, frame.bottom, frame.right - r, frame.bottom); lineTo(frame.right - len, frame.bottom)
-            moveTo(frame.left + len, frame.bottom); lineTo(frame.left + r, frame.bottom); quadraticBezierTo(frame.left, frame.bottom, frame.left, frame.bottom - r); lineTo(frame.left, frame.bottom - len)
+            moveTo(frame.left, frame.top + len); lineTo(frame.left, frame.top + r); quadraticTo(frame.left, frame.top, frame.left + r, frame.top); lineTo(frame.left + len, frame.top)
+            moveTo(frame.right - len, frame.top); lineTo(frame.right - r, frame.top); quadraticTo(frame.right, frame.top, frame.right, frame.top + r); lineTo(frame.right, frame.top + len)
+            moveTo(frame.right, frame.bottom - len); lineTo(frame.right, frame.bottom - r); quadraticTo(frame.right, frame.bottom, frame.right - r, frame.bottom); lineTo(frame.right - len, frame.bottom)
+            moveTo(frame.left + len, frame.bottom); lineTo(frame.left + r, frame.bottom); quadraticTo(frame.left, frame.bottom, frame.left, frame.bottom - r); lineTo(frame.left, frame.bottom - len)
         }
         drawPath(p, color, style = Stroke(width = w, cap = StrokeCap.Round))
         if (success) drawRoundRect(color.copy(alpha = 0.9f), Offset(left, top), Size(side, side), CornerRadius(r), style = Stroke(2.dp.toPx()))

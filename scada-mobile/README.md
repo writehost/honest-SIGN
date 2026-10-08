@@ -10,10 +10,15 @@ MVVM + Clean Architecture, Coroutines/StateFlow, Retrofit + OkHttp, Hilt, Androi
 
 | Этап | Что есть | Проверено |
 |---|---|---|
-| 1. Фундамент | Gradle multi-module, тема Light/Dark из токенов SCADA WMS, UI-kit (12 компонентов), сетевой слой (WMS/YMS клиенты, перехватчики, ошибки, безопасные повторы), DI | JVM-модули собираются и проходят 30 тестов; Android-модули — только синтаксис (см. ниже) |
-| 2. Авторизация | экран входа с анимацией и промышленной панорамой, реальный `POST /api/auth/login`, сессия в Keystore, проверка `/api/auth/me`, выход, истечение (401), офлайн-запуск, «Запомнить вход» | логика — тестами на MockWebServer; экран — нет |
+| 1. Фундамент | Gradle multi-module, тема Light/Dark из токенов SCADA WMS, UI-kit (12 компонентов), сетевой слой (WMS/YMS клиенты, перехватчики, ошибки, безопасные повторы), DI | `./gradlew assembleDebug` собирает APK; 30 JVM-тестов |
+| 2. Авторизация | экран входа с анимацией и промышленной панорамой, реальный `POST /api/auth/login`, сессия в Keystore, проверка `/api/auth/me`, выход, истечение (401), офлайн-запуск, «Запомнить вход» | логика — тестами на MockWebServer; экраны — рендер-тестами (Robolectric + Roborazzi) |
 | 2+. Подключения | «Подключить устройство» (`/api/wms/devices/enroll`), отдельный вход YMS (cookie) | логика — тестами |
 | 3–7 | рабочее пространство пока временное (без нижней навигации и заданий) | — |
+
+Не проверено: запуск на реальном телефоне и вход на боевых серверах (из среды
+сборки они недоступны).
+
+<img src="docs/screens/login-light.png" width="200"> <img src="docs/screens/login-dark.png" width="200"> <img src="docs/screens/login-error.png" width="200"> <img src="docs/screens/home-light.png" width="200">
 
 ## Модули
 
@@ -35,7 +40,8 @@ feature/home          рабочее пространство, подключе�
 ```bash
 cd scada-mobile
 ./gradlew :app:assembleDebug            # APK: app/build/outputs/apk/debug/app-debug.apk
-./gradlew -Pscada.jvmOnly test          # тесты контрактов, сети и репозиториев (без Android SDK)
+./gradlew test                          # JVM-тесты + рендер экранов в docs/screens/
+./gradlew -Pscada.jvmOnly test          # только тесты контрактов, сети и репозиториев (без Android SDK)
 ```
 
 Другой адрес сервера: `./gradlew :app:assembleDebug -Pscada.wmsUrl=https://wms.example/ -Pscada.ymsUrl=https://yms.example/`.

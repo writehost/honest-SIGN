@@ -43,6 +43,10 @@ android {
         buildConfig = true
     }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all { it.systemProperty("robolectric.pixelCopyRenderMode", "hardware"); it.systemProperty("roborazzi.test.record", "true"); it.systemProperty("screenshots.dir", rootProject.layout.projectDirectory.dir("docs/screens").asFile.absolutePath) }
+    }
 }
 
 dependencies {
@@ -61,4 +65,19 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
     implementation(libs.kotlinx.coroutines.android)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
+}
+
+// Скриншот-тесты экранов используют debug-манифест Compose — release-вариант их не запускает.
+androidComponents {
+    beforeVariants(selector().withBuildType("release")) {
+        (it as com.android.build.api.variant.HasUnitTestBuilder).enableUnitTest = false
+    }
 }
